@@ -9,6 +9,7 @@ export type ScreenId =
   | 'patients'
   | 'registration'
   | 'workspace'
+  | 'appointments'
   | 'timeline'
   | 'monitoring'
   | 'plan'
@@ -16,10 +17,16 @@ export type ScreenId =
   | 'cryostorage'
   | 'transfer'
   | 'pregnancy'
+  | 'laboratory'
+  | 'pharmacy'
+  | 'inventory'
   | 'billing'
+  | 'accounting'
+  | 'staff'
   | 'reports'
   | 'access'
-  | 'audit';
+  | 'audit'
+  | 'administration';
 
 interface AppState {
   role: Role | null;

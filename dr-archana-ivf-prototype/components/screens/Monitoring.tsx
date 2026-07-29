@@ -80,7 +80,7 @@ export function Monitoring() {
 
       <div className="grid gap-5 xl:grid-cols-3">
         {/* ============ LEFT — FOLLICLES ============ */}
-        <div className="space-y-5 xl:col-span-2">
+        <div className="min-w-0 space-y-5 xl:col-span-2">
           <Card>
             <CardHeader
               icon={<Activity className="h-4 w-4" />}

@@ -13,6 +13,7 @@ import { Login } from '@/components/screens/Login';
 import { Dashboard } from '@/components/screens/Dashboard';
 import { Patients } from '@/components/screens/Patients';
 import { Workspace } from '@/components/screens/Workspace';
+import { Appointments } from '@/components/screens/Appointments';
 import { Timeline } from '@/components/screens/Timeline';
 import { Monitoring } from '@/components/screens/Monitoring';
 import { Plan } from '@/components/screens/Plan';
@@ -20,11 +21,17 @@ import { Embryology } from '@/components/screens/Embryology';
 import { Cryostorage } from '@/components/screens/Cryostorage';
 import { Transfer } from '@/components/screens/Transfer';
 import { Pregnancy } from '@/components/screens/Pregnancy';
+import { Laboratory } from '@/components/screens/Laboratory';
+import { Pharmacy } from '@/components/screens/Pharmacy';
+import { Inventory } from '@/components/screens/Inventory';
 import { Registration } from '@/components/screens/Registration';
 import { Billing } from '@/components/screens/Billing';
+import { Accounting } from '@/components/screens/Accounting';
+import { Staff } from '@/components/screens/Staff';
 import { Reports } from '@/components/screens/Reports';
 import { Access } from '@/components/screens/Access';
 import { Audit } from '@/components/screens/Audit';
+import { Administration } from '@/components/screens/Administration';
 
 import { Lock, ArrowLeft } from 'lucide-react';
 
@@ -66,6 +73,8 @@ function ScreenRouter() {
       return <Registration />;
     case 'workspace':
       return <Workspace />;
+    case 'appointments':
+      return <Appointments />;
     case 'timeline':
       return <Timeline />;
     case 'monitoring':
@@ -80,14 +89,26 @@ function ScreenRouter() {
       return <Transfer />;
     case 'pregnancy':
       return <Pregnancy />;
+    case 'laboratory':
+      return <Laboratory />;
+    case 'pharmacy':
+      return <Pharmacy />;
+    case 'inventory':
+      return <Inventory />;
     case 'billing':
       return <Billing />;
+    case 'accounting':
+      return <Accounting />;
+    case 'staff':
+      return <Staff />;
     case 'reports':
       return <Reports />;
     case 'access':
       return <Access />;
     case 'audit':
       return <Audit />;
+    case 'administration':
+      return <Administration />;
     default:
       return <Dashboard />;
   }

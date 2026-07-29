@@ -156,7 +156,7 @@ export function Workspace() {
           {/* ---------------- SUMMARY ---------------- */}
           {tab === 'summary' && (
             <div className="animate-fade-up grid gap-5 lg:grid-cols-3">
-              <div className="space-y-5 lg:col-span-2">
+              <div className="min-w-0 space-y-5 lg:col-span-2">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Card className="p-4">
                     <div className="mb-3 flex items-center gap-2">

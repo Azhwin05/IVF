@@ -880,3 +880,303 @@ export const CONSULTATIONS = [
   { date: '22 Jul 2026', type: 'Cycle Initiation', doctor: 'Dr. Archana', note: 'Baseline scan clear. Commenced Gonal-F 225 IU. Injection technique demonstrated. Review Day 5.' },
   { date: '26 Jul 2026', type: 'Monitoring Review — Day 5', doctor: 'Dr. Archana', note: 'Good even cohort. E2 rising appropriately. Continue dose, start Cetrotide Day 6.' },
 ];
+
+// ------------------------------------------------------------
+// APPOINTMENT MANAGEMENT — full booking, queue, calendar
+// ------------------------------------------------------------
+
+export const DOCTORS = [
+  { id: 'DOC-01', name: 'Dr. Archana S. Ayyanathan', specialty: 'Chief Consultant & IVF Specialist', color: '#059669', todayCount: 8 },
+  { id: 'DOC-02', name: 'Dr. Kavya Raghunathan', specialty: 'IVF Consultant', color: '#0EA5E9', todayCount: 6 },
+  { id: 'DOC-03', name: 'Dr. Suresh Ramachandran', specialty: 'Andrologist', color: '#8B5CF6', todayCount: 4 },
+];
+
+export interface BookingSlot {
+  id: string;
+  time: string;
+  doctorId: string;
+  patient: string;
+  patientId?: string;
+  initials: string;
+  type: string;
+  channel: 'Walk-in' | 'Online' | 'Phone';
+  status: 'Waiting' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled' | 'No Show';
+  tone: StatusTone;
+}
+
+export const APPOINTMENT_BOOK: BookingSlot[] = [
+  { id: 'BK-01', time: '09:00', doctorId: 'DOC-01', patient: 'Priya Raman & Arjun Kumar', patientId: 'DAIVF-2026-00428', initials: 'PR', type: 'Follicle Monitoring', channel: 'Online', status: 'Waiting', tone: 'attention' },
+  { id: 'BK-02', time: '09:30', doctorId: 'DOC-02', patient: 'Divya Prakash', patientId: 'DAIVF-2026-00298', initials: 'DP', type: 'Embryology Review', channel: 'Phone', status: 'Confirmed', tone: 'scheduled' },
+  { id: 'BK-03', time: '10:00', doctorId: 'DOC-01', patient: 'Kavitha Ramesh', patientId: 'DAIVF-2026-00364', initials: 'KR', type: 'IVF Consultation', channel: 'Walk-in', status: 'Confirmed', tone: 'scheduled' },
+  { id: 'BK-04', time: '10:45', doctorId: 'DOC-01', patient: 'Shalini Venkat', patientId: 'DAIVF-2026-00241', initials: 'SV', type: 'Monitoring Review', channel: 'Online', status: 'In Progress', tone: 'active' },
+  { id: 'BK-05', time: '11:00', doctorId: 'DOC-03', patient: 'Balaji Srinivasan', initials: 'BS', type: 'Semen Analysis Review', channel: 'Walk-in', status: 'Waiting', tone: 'attention' },
+  { id: 'BK-06', time: '11:30', doctorId: 'DOC-01', patient: 'Nandhini Selvaraj & Rahul Menon', patientId: 'DAIVF-2026-00391', initials: 'NS', type: 'Embryo Transfer', channel: 'Online', status: 'Confirmed', tone: 'scheduled' },
+  { id: 'BK-07', time: '12:15', doctorId: 'DOC-02', patient: 'Revathi Krishnan', patientId: 'DAIVF-2026-00205', initials: 'RK', type: 'Cryo Transfer Planning', channel: 'Phone', status: 'Confirmed', tone: 'scheduled' },
+  { id: 'BK-08', time: '14:00', doctorId: 'DOC-01', patient: 'Meera Sundaram', patientId: 'DAIVF-2026-00312', initials: 'MS', type: 'Pregnancy Follow-up', channel: 'Online', status: 'Confirmed', tone: 'scheduled' },
+  { id: 'BK-09', time: '15:30', doctorId: 'DOC-01', patient: 'Anitha Balaji', patientId: 'DAIVF-2026-00276', initials: 'AB', type: 'Pre-Retrieval Counselling', channel: 'Walk-in', status: 'Confirmed', tone: 'scheduled' },
+  { id: 'BK-10', time: '16:00', doctorId: 'DOC-03', patient: 'Prakash Nair', initials: 'PN', type: 'Fertility Consultation', channel: 'Online', status: 'Cancelled', tone: 'cancelled' },
+  { id: 'BK-11', time: '09:15', doctorId: 'DOC-02', patient: 'Lavanya Subramaniam', initials: 'LS', type: 'Follow-up Consultation', channel: 'Phone', status: 'No Show', tone: 'critical' },
+  { id: 'BK-12', time: 'Yesterday', doctorId: 'DOC-01', patient: 'Vignesh Kumar', initials: 'VK', type: 'IVF Consultation', channel: 'Walk-in', status: 'Completed', tone: 'completed' },
+];
+
+export const APPOINTMENT_METRICS = {
+  totalToday: 24,
+  confirmed: 17,
+  waiting: 3,
+  cancelled: 2,
+  noShow: 1,
+  onlineBookings: 14,
+};
+
+// ------------------------------------------------------------
+// LABORATORY MANAGEMENT — test ordering, sample tracking
+// ------------------------------------------------------------
+
+export interface LabOrder {
+  id: string;
+  patient: string;
+  patientId?: string;
+  test: string;
+  orderedBy: string;
+  orderedOn: string;
+  sampleType: string;
+  source: 'Internal Lab' | 'External Lab';
+  externalLab?: string;
+  status: 'Ordered' | 'Sample Collected' | 'In Progress' | 'Report Ready' | 'Delivered';
+  tone: StatusTone;
+  priority: 'Routine' | 'Urgent';
+}
+
+export const LAB_ORDERS: LabOrder[] = [
+  { id: 'LAB-3391', patient: 'Priya Raman', patientId: 'DAIVF-2026-00428', test: 'Estradiol (E2), LH, Progesterone', orderedBy: 'Dr. Archana', orderedOn: '29 Jul 2026, 08:10', sampleType: 'Venous Blood', source: 'Internal Lab', status: 'Report Ready', tone: 'completed', priority: 'Urgent' },
+  { id: 'LAB-3390', patient: 'Shalini Venkat', patientId: 'DAIVF-2026-00241', test: 'Estradiol (E2), LH', orderedBy: 'Dr. Archana', orderedOn: '29 Jul 2026, 08:05', sampleType: 'Venous Blood', source: 'Internal Lab', status: 'In Progress', tone: 'active', priority: 'Urgent' },
+  { id: 'LAB-3389', patient: 'Kavitha Ramesh', patientId: 'DAIVF-2026-00364', test: 'AMH, FSH, TSH, Prolactin', orderedBy: 'Dr. Archana', orderedOn: '29 Jul 2026, 07:40', sampleType: 'Venous Blood', source: 'External Lab', externalLab: 'Neuberg Diagnostics, Chennai', status: 'Sample Collected', tone: 'scheduled', priority: 'Routine' },
+  { id: 'LAB-3388', patient: 'Balaji Srinivasan', test: 'Semen Analysis (Advanced)', orderedBy: 'Dr. Suresh Ramachandran', orderedOn: '28 Jul 2026, 16:20', sampleType: 'Semen', source: 'Internal Lab', status: 'Report Ready', tone: 'completed', priority: 'Routine' },
+  { id: 'LAB-3387', patient: 'Meera Sundaram', patientId: 'DAIVF-2026-00312', test: 'Beta-hCG (Quantitative)', orderedBy: 'Dr. Archana', orderedOn: '28 Jul 2026, 14:00', sampleType: 'Venous Blood', source: 'Internal Lab', status: 'Delivered', tone: 'completed', priority: 'Urgent' },
+  { id: 'LAB-3386', patient: 'Revathi Krishnan', patientId: 'DAIVF-2026-00205', test: 'Thyroid Panel, Vitamin D', orderedBy: 'Dr. Kavya Raghunathan', orderedOn: '28 Jul 2026, 11:15', sampleType: 'Venous Blood', source: 'External Lab', externalLab: 'Metropolis Healthcare', status: 'Ordered', tone: 'pending', priority: 'Routine' },
+  { id: 'LAB-3385', patient: 'Divya Prakash', patientId: 'DAIVF-2026-00298', test: 'Karyotyping', orderedBy: 'Dr. Kavya Raghunathan', orderedOn: '27 Jul 2026, 10:00', sampleType: 'Venous Blood', source: 'External Lab', externalLab: 'Neuberg Diagnostics, Chennai', status: 'In Progress', tone: 'active', priority: 'Routine' },
+];
+
+export const LAB_METRICS = {
+  ordersToday: 7,
+  awaitingCollection: 1,
+  inProgress: 2,
+  reportsReady: 2,
+  externalPending: 2,
+};
+
+// ------------------------------------------------------------
+// PHARMACY MANAGEMENT
+// ------------------------------------------------------------
+
+export interface PharmacyItem {
+  id: string;
+  name: string;
+  category: string;
+  batch: string;
+  expiry: string;
+  stock: number;
+  reorderLevel: number;
+  unit: string;
+  mrp: number;
+  supplier: string;
+  gst: number;
+}
+
+export const PHARMACY_ITEMS: PharmacyItem[] = [
+  { id: 'MED-001', name: 'Gonal-F 225 IU Injection', category: 'Gonadotropin', batch: 'GNF-2607', expiry: 'Mar 2027', stock: 42, reorderLevel: 20, unit: 'Pen', mrp: 3450, supplier: 'Merck Serono India', gst: 12 },
+  { id: 'MED-002', name: 'Cetrotide 0.25mg Injection', category: 'GnRH Antagonist', batch: 'CTR-1182', expiry: 'Jan 2027', stock: 18, reorderLevel: 20, unit: 'Vial', mrp: 1280, supplier: 'Merck Serono India', gst: 12 },
+  { id: 'MED-003', name: 'Ovitrelle 250mcg Injection', category: 'Trigger Agent', batch: 'OVT-0994', expiry: 'Nov 2026', stock: 9, reorderLevel: 15, unit: 'Pen', mrp: 2150, supplier: 'Merck Serono India', gst: 12 },
+  { id: 'MED-004', name: 'Progesterone 400mg Pessary', category: 'Luteal Support', batch: 'PRG-3341', expiry: 'Jun 2027', stock: 210, reorderLevel: 100, unit: 'Strip', mrp: 480, supplier: 'Cadila Pharmaceuticals', gst: 12 },
+  { id: 'MED-005', name: 'Folic Acid 5mg Tablet', category: 'Supplement', batch: 'FA-7712', expiry: 'Sep 2027', stock: 340, reorderLevel: 150, unit: 'Strip', mrp: 45, supplier: 'Mankind Pharma', gst: 5 },
+  { id: 'MED-006', name: 'Gonal-F 900 IU Multidose', category: 'Gonadotropin', batch: 'GNF-2588', expiry: 'Feb 2027', stock: 6, reorderLevel: 10, unit: 'Pen', mrp: 11200, supplier: 'Merck Serono India', gst: 12 },
+  { id: 'MED-007', name: 'Duphaston 10mg Tablet', category: 'Luteal Support', batch: 'DUP-4471', expiry: 'Aug 2027', stock: 128, reorderLevel: 80, unit: 'Strip', mrp: 220, supplier: 'Abbott India', gst: 12 },
+  { id: 'MED-008', name: 'HCG 5000IU Injection', category: 'Trigger Agent', batch: 'HCG-2201', expiry: 'Dec 2026', stock: 14, reorderLevel: 15, unit: 'Vial', mrp: 890, supplier: 'Bharat Serums', gst: 12 },
+];
+
+export const PHARMACY_SALES = [
+  { id: 'RX-4471', patient: 'Priya Raman', date: '29 Jul 2026, 09:52', items: 'Gonal-F 225 IU × 3, Folic Acid × 1', amount: 10395, status: 'Dispensed', tone: 'completed' as StatusTone },
+  { id: 'RX-4470', patient: 'Shalini Venkat', date: '29 Jul 2026, 09:15', items: 'Cetrotide 0.25mg × 4', amount: 5120, status: 'Dispensed', tone: 'completed' as StatusTone },
+  { id: 'RX-4469', patient: 'Meera Sundaram', date: '28 Jul 2026, 14:30', items: 'Duphaston 10mg × 2, Folic Acid × 2', amount: 530, status: 'Dispensed', tone: 'completed' as StatusTone },
+  { id: 'RX-4468', patient: 'Anitha Balaji', date: '28 Jul 2026, 11:05', items: 'Ovitrelle 250mcg × 1', amount: 2150, status: 'Pending Pickup', tone: 'pending' as StatusTone },
+];
+
+export const PHARMACY_METRICS = {
+  todaySales: 15515,
+  itemsBelowReorder: 3,
+  expiringWithin90Days: 2,
+  totalSKUs: PHARMACY_ITEMS.length,
+};
+
+// ------------------------------------------------------------
+// INVENTORY MANAGEMENT — consumables, cryogenic supplies, equipment
+// ------------------------------------------------------------
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: 'IVF Consumables' | 'Cryogenic Supplies' | 'Lab Supplies' | 'Surgical Equipment';
+  stock: number;
+  unit: string;
+  reorderLevel: number;
+  location: string;
+  supplier: string;
+  lastRestocked: string;
+  status: 'In Stock' | 'Low Stock' | 'Critical' | 'On Order';
+  tone: StatusTone;
+}
+
+export const INVENTORY_ITEMS: InventoryItem[] = [
+  { id: 'INV-101', name: 'ICSI Micropipettes', category: 'IVF Consumables', stock: 84, unit: 'Pieces', reorderLevel: 50, location: 'Embryology Lab — Cabinet A', supplier: 'Cook Medical', lastRestocked: '18 Jul 2026', status: 'In Stock', tone: 'completed' },
+  { id: 'INV-102', name: 'Embryo Culture Media (Sequential)', category: 'IVF Consumables', stock: 6, unit: 'Kits', reorderLevel: 10, location: 'Embryology Lab — Cold Storage', supplier: 'Vitrolife', lastRestocked: '10 Jul 2026', status: 'Low Stock', tone: 'attention' },
+  { id: 'INV-103', name: 'Vitrification Straws', category: 'Cryogenic Supplies', stock: 145, unit: 'Pieces', reorderLevel: 100, location: 'Cryostorage Room', supplier: 'CryoBio Systems', lastRestocked: '22 Jul 2026', status: 'In Stock', tone: 'completed' },
+  { id: 'INV-104', name: 'Liquid Nitrogen', category: 'Cryogenic Supplies', stock: 2, unit: 'Dewars (50L)', reorderLevel: 3, location: 'Cryostorage Room', supplier: 'Chennai Cryogenics', lastRestocked: '25 Jul 2026', status: 'Critical', tone: 'critical' },
+  { id: 'INV-105', name: 'Oocyte Retrieval Needles', category: 'Surgical Equipment', stock: 22, unit: 'Pieces', reorderLevel: 15, location: 'OT — Store 2', supplier: 'Cook Medical', lastRestocked: '15 Jul 2026', status: 'In Stock', tone: 'completed' },
+  { id: 'INV-106', name: 'Embryo Transfer Catheters', category: 'Surgical Equipment', stock: 11, unit: 'Pieces', reorderLevel: 15, location: 'OT — Store 2', supplier: 'Cook Medical', lastRestocked: '12 Jul 2026', status: 'Low Stock', tone: 'attention' },
+  { id: 'INV-107', name: 'Sterile Petri Dishes', category: 'Lab Supplies', stock: 320, unit: 'Pieces', reorderLevel: 150, location: 'Embryology Lab — Cabinet B', supplier: 'Nunc / Thermo Fisher', lastRestocked: '20 Jul 2026', status: 'In Stock', tone: 'completed' },
+  { id: 'INV-108', name: 'Ultrasound Gel', category: 'Lab Supplies', stock: 4, unit: 'Bottles (5L)', reorderLevel: 6, location: 'Scan Room 1 & 2', supplier: 'Sonogel India', lastRestocked: '8 Jul 2026', status: 'On Order', tone: 'scheduled' },
+];
+
+export const PURCHASE_ORDERS = [
+  { id: 'PO-2291', item: 'Embryo Culture Media (Sequential)', supplier: 'Vitrolife', qty: 15, amount: 187500, status: 'Approved', date: '28 Jul 2026', tone: 'scheduled' as StatusTone },
+  { id: 'PO-2290', item: 'Liquid Nitrogen', supplier: 'Chennai Cryogenics', qty: 5, amount: 42000, status: 'Pending Approval', date: '29 Jul 2026', tone: 'attention' as StatusTone },
+  { id: 'PO-2289', item: 'Ultrasound Gel', supplier: 'Sonogel India', qty: 20, amount: 18000, status: 'Dispatched', date: '26 Jul 2026', tone: 'active' as StatusTone },
+  { id: 'PO-2288', item: 'Embryo Transfer Catheters', supplier: 'Cook Medical', qty: 25, amount: 87500, status: 'Received', date: '20 Jul 2026', tone: 'completed' as StatusTone },
+];
+
+export const INVENTORY_METRICS = {
+  totalItems: INVENTORY_ITEMS.length,
+  lowStock: INVENTORY_ITEMS.filter((i) => i.status === 'Low Stock').length,
+  critical: INVENTORY_ITEMS.filter((i) => i.status === 'Critical').length,
+  onOrder: PURCHASE_ORDERS.filter((p) => p.status !== 'Received').length,
+  stockValue: 1842000,
+};
+
+// ------------------------------------------------------------
+// ACCOUNTING — cash book, ledger, GST, P&L
+// ------------------------------------------------------------
+
+export const CASH_BOOK = [
+  { date: '29 Jul 2026', particulars: 'Package payment — Kavitha Ramesh', type: 'Receipt', mode: 'UPI', amount: 75000, balance: 1284500 },
+  { date: '29 Jul 2026', particulars: 'Pharmacy purchase — Merck Serono', type: 'Payment', mode: 'Bank Transfer', amount: -112000, balance: 1209500 },
+  { date: '28 Jul 2026', particulars: 'Consultation fees — 6 patients', type: 'Receipt', mode: 'Cash', amount: 9000, balance: 1321500 },
+  { date: '28 Jul 2026', particulars: 'Staff salary — July (partial)', type: 'Payment', mode: 'Bank Transfer', amount: -420000, balance: 1312500 },
+  { date: '27 Jul 2026', particulars: 'Package payment — Nandhini Selvaraj', type: 'Receipt', mode: 'Bank Transfer', amount: 100000, balance: 1732500 },
+  { date: '26 Jul 2026', particulars: 'Equipment maintenance — Ultrasound', type: 'Payment', mode: 'Cheque', amount: -35000, balance: 1632500 },
+];
+
+export const GST_SUMMARY = {
+  period: 'July 2026',
+  outputGST: 284600,
+  inputGST: 96200,
+  netPayable: 188400,
+  filingStatus: 'Draft — Due 20 Aug 2026',
+};
+
+export const PROFIT_LOSS = {
+  period: 'July 2026 (Month to Date)',
+  revenue: [
+    { label: 'Consultation Fees', value: 412000 },
+    { label: 'IVF Package Revenue', value: 4280000 },
+    { label: 'Pharmacy Sales', value: 468000 },
+    { label: 'Laboratory Charges', value: 186000 },
+  ],
+  expenses: [
+    { label: 'Staff Salaries', value: 1850000 },
+    { label: 'Medical Supplies & Pharmacy Purchases', value: 920000 },
+    { label: 'Equipment & Maintenance', value: 210000 },
+    { label: 'Utilities & Rent', value: 340000 },
+    { label: 'Administrative Expenses', value: 128000 },
+  ],
+};
+
+export const LEDGER_ACCOUNTS = [
+  { name: 'Patient Receivables', debit: 920000, credit: 0, balance: 920000 },
+  { name: 'Pharmacy Payable — Merck Serono', debit: 0, credit: 112000, balance: -112000 },
+  { name: 'Bank Account — HDFC Current', debit: 5840000, credit: 4230000, balance: 1610000 },
+  { name: 'Cash in Hand', debit: 186000, credit: 112000, balance: 74000 },
+  { name: 'GST Payable', debit: 96200, credit: 284600, balance: -188400 },
+];
+
+// ------------------------------------------------------------
+// STAFF MANAGEMENT
+// ------------------------------------------------------------
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
+  department: string;
+  phone: string;
+  joined: string;
+  status: 'Present' | 'On Leave' | 'Absent';
+  tone: StatusTone;
+  leaveBalance: number;
+}
+
+export const STAFF_DIRECTORY: StaffMember[] = [
+  { id: 'EMP-001', name: 'Dr. Archana S. Ayyanathan', role: 'Chief Consultant', department: 'Reproductive Medicine', phone: '+91 98400 11223', joined: '2 Jan 2014', status: 'Present', tone: 'completed', leaveBalance: 12 },
+  { id: 'EMP-002', name: 'Dr. Kavya Raghunathan', role: 'IVF Consultant', department: 'Reproductive Medicine', phone: '+91 98400 22334', joined: '14 Mar 2020', status: 'Present', tone: 'completed', leaveBalance: 9 },
+  { id: 'EMP-003', name: 'Dr. Meera Kapoor', role: 'Senior Embryologist', department: 'Embryology Laboratory', phone: '+91 98400 33445', joined: '5 Jun 2019', status: 'Present', tone: 'completed', leaveBalance: 14 },
+  { id: 'EMP-004', name: 'Anand Kumar', role: 'Lab Technician', department: 'Embryology Laboratory', phone: '+91 98400 44556', joined: '20 Aug 2021', status: 'Present', tone: 'completed', leaveBalance: 8 },
+  { id: 'EMP-005', name: 'Lakshmi Narayanan', role: 'Front Office Executive', department: 'Patient Services', phone: '+91 98400 55667', joined: '11 Nov 2022', status: 'Present', tone: 'completed', leaveBalance: 6 },
+  { id: 'EMP-006', name: 'Divya Sundaresan', role: 'Staff Nurse', department: 'Nursing', phone: '+91 98400 66778', joined: '3 Feb 2021', status: 'On Leave', tone: 'attention', leaveBalance: 4 },
+  { id: 'EMP-007', name: 'Ganesh Prabhu', role: 'Pharmacist', department: 'Pharmacy', phone: '+91 98400 77889', joined: '17 Sep 2020', status: 'Present', tone: 'completed', leaveBalance: 10 },
+  { id: 'EMP-008', name: 'Rajesh Venkatesan', role: 'Hospital Administrator', department: 'Operations & Finance', phone: '+91 98400 88990', joined: '1 Jan 2014', status: 'Present', tone: 'completed', leaveBalance: 15 },
+  { id: 'EMP-009', name: 'Swathi Ramesh', role: 'Accountant', department: 'Accounts', phone: '+91 98400 99001', joined: '8 Jul 2023', status: 'Absent', tone: 'critical', leaveBalance: 3 },
+  { id: 'EMP-010', name: 'Karthik Balan', role: 'Store & Inventory Manager', department: 'Inventory', phone: '+91 98400 10112', joined: '25 Apr 2022', status: 'Present', tone: 'completed', leaveBalance: 7 },
+];
+
+export const LEAVE_REQUESTS = [
+  { staff: 'Divya Sundaresan', type: 'Sick Leave', from: '28 Jul 2026', to: '30 Jul 2026', days: 3, status: 'Approved', tone: 'completed' as StatusTone },
+  { staff: 'Swathi Ramesh', type: 'Casual Leave', from: '29 Jul 2026', to: '29 Jul 2026', days: 1, status: 'Pending', tone: 'attention' as StatusTone },
+  { staff: 'Ganesh Prabhu', type: 'Annual Leave', from: '5 Aug 2026', to: '9 Aug 2026', days: 5, status: 'Pending', tone: 'attention' as StatusTone },
+];
+
+export const STAFF_METRICS = {
+  totalStaff: STAFF_DIRECTORY.length,
+  presentToday: STAFF_DIRECTORY.filter((s) => s.status === 'Present').length,
+  onLeave: STAFF_DIRECTORY.filter((s) => s.status === 'On Leave').length,
+  pendingLeaveRequests: LEAVE_REQUESTS.filter((l) => l.status === 'Pending').length,
+};
+
+// ------------------------------------------------------------
+// SYSTEM ADMINISTRATION — master settings
+// ------------------------------------------------------------
+
+export const PROCEDURE_CHARGES = [
+  { procedure: 'Initial IVF Consultation', charge: 1500 },
+  { procedure: 'Follow-up Consultation', charge: 800 },
+  { procedure: 'Follicle Monitoring Scan', charge: 1200 },
+  { procedure: 'Oocyte Retrieval (TVOR)', charge: 45000 },
+  { procedure: 'ICSI Procedure', charge: 35000 },
+  { procedure: 'Embryo Transfer', charge: 25000 },
+  { procedure: 'Embryo Vitrification (per batch)', charge: 15000 },
+  { procedure: 'Cryostorage — Annual (per straw)', charge: 9000 },
+];
+
+export const TREATMENT_PACKAGES = [
+  { name: 'Complete IVF Treatment Package', price: 250000, validity: '1 Cycle', inclusions: 8 },
+  { name: 'IUI Package (3 Cycles)', price: 75000, validity: '6 Months', inclusions: 4 },
+  { name: 'Frozen Embryo Transfer Package', price: 65000, validity: '1 Cycle', inclusions: 5 },
+  { name: 'Fertility Assessment Package', price: 18000, validity: '30 Days', inclusions: 6 },
+];
+
+export const LAB_TEST_CATALOGUE = [
+  { test: 'AMH (Anti-Müllerian Hormone)', price: 2200, tat: '24 hrs' },
+  { test: 'FSH / LH Panel', price: 900, tat: '12 hrs' },
+  { test: 'Estradiol (E2)', price: 750, tat: '6 hrs' },
+  { test: 'Beta-hCG (Quantitative)', price: 650, tat: '4 hrs' },
+  { test: 'Semen Analysis (Advanced)', price: 1500, tat: '24 hrs' },
+  { test: 'Thyroid Profile (TSH, T3, T4)', price: 850, tat: '12 hrs' },
+  { test: 'Karyotyping', price: 6500, tat: '10 days' },
+];
+
+export const SYSTEM_SETTINGS_GROUPS = [
+  { group: 'Users & Roles', items: ['Staff accounts', 'Role permissions', 'Login policy'], icon: 'users' },
+  { group: 'Clinical Master Data', items: ['Doctor profiles', 'Lab test catalogue', 'Treatment protocols'], icon: 'clipboard' },
+  { group: 'Billing Configuration', items: ['Procedure charges', 'Treatment packages', 'GST & tax rates'], icon: 'receipt' },
+  { group: 'Notifications', items: ['SMS templates', 'Email templates', 'WhatsApp integration'], icon: 'bell' },
+  { group: 'Security', items: ['Two-factor authentication', 'Session timeout', 'IP / network restriction'], icon: 'shield' },
+  { group: 'System', items: ['Backup schedule', 'Audit retention', 'Branding & identity'], icon: 'settings' },
+];

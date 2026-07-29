@@ -92,7 +92,7 @@ export function Plan() {
 
       <div className="grid gap-5 lg:grid-cols-3">
         {/* ============ PLAN CORE ============ */}
-        <div className="space-y-5 lg:col-span-2">
+        <div className="min-w-0 space-y-5 lg:col-span-2">
           <Card>
             <CardHeader
               icon={<ClipboardList className="h-4 w-4" />}
