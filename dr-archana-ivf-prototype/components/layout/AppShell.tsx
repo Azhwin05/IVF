@@ -1,0 +1,131 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useApp } from '@/lib/store';
+import { useHotkey } from '@/lib/hooks';
+import { canAccess } from './nav';
+import { Sidebar } from './Sidebar';
+import { Topbar } from './Topbar';
+import { CommandPalette } from './CommandPalette';
+import { ToastStack, Button, Card } from '@/components/ui/primitives';
+
+import { Login } from '@/components/screens/Login';
+import { Dashboard } from '@/components/screens/Dashboard';
+import { Patients } from '@/components/screens/Patients';
+import { Workspace } from '@/components/screens/Workspace';
+import { Timeline } from '@/components/screens/Timeline';
+import { Monitoring } from '@/components/screens/Monitoring';
+import { Plan } from '@/components/screens/Plan';
+import { Embryology } from '@/components/screens/Embryology';
+import { Cryostorage } from '@/components/screens/Cryostorage';
+import { Transfer } from '@/components/screens/Transfer';
+import { Pregnancy } from '@/components/screens/Pregnancy';
+import { Registration } from '@/components/screens/Registration';
+import { Billing } from '@/components/screens/Billing';
+import { Reports } from '@/components/screens/Reports';
+import { Access } from '@/components/screens/Access';
+import { Audit } from '@/components/screens/Audit';
+
+import { Lock, ArrowLeft } from 'lucide-react';
+
+/** Shown when a role navigates to a module outside its permission set. */
+function Restricted() {
+  const { back, role } = useApp();
+  return (
+    <div className="screen-enter flex h-full items-center justify-center p-8">
+      <Card className="max-w-md p-8 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-100">
+          <Lock className="h-7 w-7 text-ink-400" />
+        </div>
+        <h2 className="tracking-display mt-5 text-[20px] font-semibold text-ink-900">
+          You do not have permission to view this module
+        </h2>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-ink-500">
+          Your current role does not include access to this area of the clinical system. This
+          attempt has been recorded in the audit trail.
+        </p>
+        <Button className="mt-6" icon={<ArrowLeft className="h-4 w-4" />} onClick={back}>
+          Go back
+        </Button>
+      </Card>
+    </div>
+  );
+}
+
+function ScreenRouter() {
+  const { screen, role } = useApp();
+  if (!role) return null;
+  if (!canAccess(role, screen)) return <Restricted />;
+
+  switch (screen) {
+    case 'dashboard':
+      return <Dashboard />;
+    case 'patients':
+      return <Patients />;
+    case 'registration':
+      return <Registration />;
+    case 'workspace':
+      return <Workspace />;
+    case 'timeline':
+      return <Timeline />;
+    case 'monitoring':
+      return <Monitoring />;
+    case 'plan':
+      return <Plan />;
+    case 'embryology':
+      return <Embryology />;
+    case 'cryostorage':
+      return <Cryostorage />;
+    case 'transfer':
+      return <Transfer />;
+    case 'pregnancy':
+      return <Pregnancy />;
+    case 'billing':
+      return <Billing />;
+    case 'reports':
+      return <Reports />;
+    case 'access':
+      return <Access />;
+    case 'audit':
+      return <Audit />;
+    default:
+      return <Dashboard />;
+  }
+}
+
+export function AppShell() {
+  const { role, toasts, dismissToast, setPaletteOpen, paletteOpen, screen } = useApp();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useHotkey('k', () => setPaletteOpen(!paletteOpen));
+
+  // Close the mobile drawer automatically whenever navigation happens
+  // from a source other than the drawer itself (e.g. command palette).
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [screen]);
+
+  if (!role) return <Login />;
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-ink-50">
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((c) => !c)}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />
+        <main key={screen} className="scroll-area relative flex-1">
+          <ScreenRouter />
+        </main>
+      </div>
+
+      <CommandPalette />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+    </div>
+  );
+}
