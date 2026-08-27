@@ -3,46 +3,66 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import { PATIENTS } from '@/lib/data';
-import { cn, TONE } from '@/lib/utils';
+import { cn, TONE, ageFromDOB, initialsOf } from '@/lib/utils';
 import { Card, Badge, Button, Avatar, Input, SectionTitle, Skeleton } from '@/components/ui/primitives';
-import { useSimulatedLoad } from '@/lib/hooks';
+import { usePatients } from '@/lib/api/patients';
 import { Search, SlidersHorizontal, UserPlus, ChevronRight, Download, LayoutGrid, List } from 'lucide-react';
 
 const FILTERS = ['All Patients', 'Active Cycles', 'Stimulation', 'Embryology', 'Follow-up'];
 
+/** The static fixture's per-patient treatment-stage detail (stage, AMH,
+ * cycle day…) isn't returned by GET /patients — that endpoint deliberately
+ * stays a lightweight registry row (spec §9's "purpose-specific response
+ * shapes"). For the one seeded demo patient we already have that detail
+ * from the prototype's original story, so it's used to enrich the real
+ * row here; every other real patient shows honest placeholders instead
+ * of fabricated clinical data. */
+const STATIC_BY_UHID = Object.fromEntries(PATIENTS.map((p) => [p.id, p]));
+
 export function Patients() {
-  const { go, toast } = useApp();
+  const { go, toast, openPatient } = useApp();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('All Patients');
   const [view, setView] = useState<'list' | 'grid'>('list');
-  const loading = useSimulatedLoad([filter], 320);
+  const patientsQuery = usePatients(q.trim() || undefined);
+  const loading = patientsQuery.isLoading;
+
+  const allRows = useMemo(() => {
+    return (patientsQuery.data ?? []).map((p) => {
+      const enrich = STATIC_BY_UHID[p.uhid];
+      return {
+        id: p.id,
+        uhid: p.uhid,
+        name: p.full_name,
+        initials: initialsOf(p.full_name),
+        age: ageFromDOB(p.date_of_birth),
+        partner: enrich?.partner ?? null,
+        stage: enrich?.stage ?? 'Registered',
+        tone: enrich?.tone ?? ('neutral' as const),
+        cycleDay: enrich?.cycleDay ?? '—',
+        lastVisit: enrich?.lastVisit ?? '—',
+        amh: enrich?.amh ?? null,
+      };
+    });
+  }, [patientsQuery.data]);
 
   const rows = useMemo(() => {
-    let r = PATIENTS;
+    let r = allRows;
     if (filter === 'Active Cycles') r = r.filter((p) => p.tone === 'active' || p.tone === 'scheduled');
     if (filter === 'Stimulation') r = r.filter((p) => p.stage.includes('Stimulation'));
     if (filter === 'Embryology') r = r.filter((p) => p.stage.includes('Embryology') || p.stage.includes('Retrieval'));
     if (filter === 'Follow-up') r = r.filter((p) => p.stage.includes('Pregnancy'));
-    if (q.trim()) {
-      const t = q.toLowerCase();
-      r = r.filter(
-        (p) => p.name.toLowerCase().includes(t) || p.id.toLowerCase().includes(t) || p.partner.toLowerCase().includes(t)
-      );
-    }
     return r;
-  }, [q, filter]);
+  }, [allRows, filter]);
 
-  const open = (id: string, name: string) => {
-    if (id === 'DAIVF-2026-00428') go('workspace');
-    else toast({ title: name, body: `Opening patient record ${id}.`, tone: 'info' });
-  };
+  const open = (id: string, name: string) => openPatient(id);
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
       <SectionTitle
         eyebrow="Clinical"
         title="Patient Registry"
-        description={`${PATIENTS.length} couples under active fertility care`}
+        description={`${allRows.length} ${allRows.length === 1 ? 'patient' : 'patients'} under active fertility care`}
         action={
           <div className="flex flex-wrap gap-2">
             <Button icon={<Download className="h-4 w-4" />} onClick={() => toast({ title: 'Export queued', body: 'Patient registry will be exported as CSV.', tone: 'success' })}>
@@ -138,9 +158,9 @@ export function Patients() {
                   <div className="min-w-0">
                     <p className="truncate text-[13.5px] font-semibold text-ink-900">{p.name}</p>
                     <p className="tnum truncate text-[11.5px] text-ink-500">
-                      {p.id} · {p.age} yrs
+                      {p.uhid}{p.age !== null ? ` · ${p.age} yrs` : ''}
                     </p>
-                    <p className="truncate text-[11px] text-ink-400">Partner — {p.partner}</p>
+                    {p.partner && <p className="truncate text-[11px] text-ink-400">Partner — {p.partner}</p>}
                   </div>
                 </div>
 
@@ -149,7 +169,7 @@ export function Patients() {
                     {p.stage}
                   </Badge>
                   <span className="tnum text-[11.5px] font-medium text-ink-700 md:text-[12.5px]">{p.cycleDay}</span>
-                  <span className="tnum text-[11.5px] text-ink-600 md:text-[12.5px]">AMH {p.amh}</span>
+                  <span className="tnum text-[11.5px] text-ink-600 md:text-[12.5px]">{p.amh ? `AMH ${p.amh}` : '—'}</span>
                   <span className="text-[11px] text-ink-500 md:text-[12px]">{p.lastVisit}</span>
                 </div>
 
@@ -182,7 +202,7 @@ export function Patients() {
                 </Badge>
               </div>
               <p className="mt-3 text-[14px] font-semibold text-ink-900">{p.name}</p>
-              <p className="tnum text-[11.5px] text-ink-500">{p.id}</p>
+              <p className="tnum text-[11.5px] text-ink-500">{p.uhid}</p>
               <div className="mt-3 space-y-1.5 border-t border-ink-100 pt-3">
                 <div className="flex justify-between">
                   <span className="text-[11.5px] text-ink-500">Stage</span>
@@ -190,11 +210,11 @@ export function Patients() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[11.5px] text-ink-500">Partner</span>
-                  <span className="text-[11.5px] font-medium text-ink-800">{p.partner}</span>
+                  <span className="text-[11.5px] font-medium text-ink-800">{p.partner ?? '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[11.5px] text-ink-500">AMH</span>
-                  <span className="tnum text-[11.5px] font-medium text-ink-800">{p.amh} ng/mL</span>
+                  <span className="tnum text-[11.5px] font-medium text-ink-800">{p.amh ? `${p.amh} ng/mL` : '—'}</span>
                 </div>
               </div>
             </Card>

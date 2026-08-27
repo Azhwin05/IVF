@@ -1,0 +1,121 @@
+/**
+ * TypeScript mirrors of backend Pydantic response/request schemas.
+ * Field names match the backend exactly (snake_case) rather than being
+ * re-cased, so there's no silent drift between what the API actually
+ * returns and what the frontend assumes it returns.
+ */
+
+// ---- auth -------------------------------------------------------------
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in_seconds: number;
+}
+
+export interface UserSummary {
+  id: string;
+  employee_code: string;
+  full_name: string;
+  email: string;
+  department: string | null;
+  is_active: boolean;
+  role_code: string;
+}
+
+// ---- patients -----------------------------------------------------------
+
+export interface PatientListRow {
+  id: string;
+  uhid: string;
+  full_name: string;
+  date_of_birth: string | null;
+  gender: string;
+  phone: string | null;
+}
+
+export interface PatientSummary {
+  id: string;
+  uhid: string;
+  full_name: string;
+  date_of_birth: string | null;
+  gender: string;
+  blood_group: string | null;
+  phone: string | null;
+  email: string | null;
+  allergies: string | null;
+  created_at: string;
+}
+
+export interface PatientCreate {
+  full_name: string;
+  date_of_birth?: string | null;
+  gender: string;
+  blood_group?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  occupation?: string | null;
+  emergency_contact?: string | null;
+  referral_source?: string | null;
+  allergies?: string | null;
+}
+
+export interface CoupleCreate {
+  female_patient: PatientCreate;
+  male_patient: PatientCreate;
+  relationship_info?: string | null;
+  infertility_type?: string | null;
+  infertility_duration?: string | null;
+  previous_iui_cycles?: number;
+  previous_ivf_cycles?: number;
+  previous_treatment_notes?: string | null;
+}
+
+export interface CoupleOut {
+  id: string;
+  female_patient: PatientSummary;
+  male_patient: PatientSummary;
+  relationship_info: string | null;
+  infertility_type: string | null;
+  infertility_duration: string | null;
+}
+
+// ---- appointments -------------------------------------------------------
+
+export type AppointmentStatus = 'scheduled' | 'arrived' | 'waiting' | 'in_consultation' | 'completed' | 'cancelled' | 'no_show';
+export type AppointmentChannel = 'walk_in' | 'phone' | 'online' | 'referral';
+
+export interface AppointmentOut {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  scheduled_at: string;
+  visit_type: string;
+  channel: AppointmentChannel;
+  status: AppointmentStatus;
+  checked_in_at: string | null;
+}
+
+export interface AppointmentCreate {
+  patient_id: string;
+  doctor_id: string;
+  scheduled_at: string;
+  visit_type: string;
+  channel: AppointmentChannel;
+}
+
+// ---- reports/dashboard ----------------------------------------------------
+
+export interface DashboardMetrics {
+  appointments_today: number;
+  patients_waiting: number;
+  active_ivf_cycles: number;
+  todays_collection_paise: number;
+}
+
+export interface CycleDistributionRow {
+  stage: string;
+  count: number;
+}

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useApp } from '@/lib/store';
+import React, { useState, useRef } from 'react';
+import { useAuth } from '@/lib/auth';
 import { USERS, type Role } from '@/lib/data';
+import { ApiError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { Button, Input } from '@/components/ui/primitives';
 import { useSequence } from '@/lib/hooks';
@@ -17,6 +18,7 @@ import {
   Check,
   ArrowRight,
   Fingerprint,
+  AlertTriangle,
 } from 'lucide-react';
 
 const AUTH_STEPS = [
@@ -26,25 +28,65 @@ const AUTH_STEPS = [
   'Preparing clinical workspace',
 ];
 
-const ROLE_CARDS: { role: Role; label: string; desc: string; icon: any }[] = [
-  { role: 'doctor', label: 'Dr. Archana', desc: 'Chief Consultant & IVF Specialist', icon: HeartPulse },
-  { role: 'receptionist', label: 'Front Office', desc: 'Registration, scheduling & queue', icon: Fingerprint },
-  { role: 'embryologist', label: 'Embryology Lab', desc: 'Oocytes, embryos & cryostorage', icon: Microscope },
-  { role: 'management', label: 'Management', desc: 'Operations, revenue & analytics', icon: Sparkles },
+/** Emails match the demo accounts seeded by backend/scripts/seed_db.py —
+ * picking a card here is a convenience prefill, not a fake local login. */
+const ROLE_CARDS: { role: Role; label: string; desc: string; icon: any; email: string }[] = [
+  { role: 'doctor', label: 'Dr. Archana', desc: 'Chief Consultant & IVF Specialist', icon: HeartPulse, email: 'archana@drarchanaivf.in' },
+  { role: 'receptionist', label: 'Front Office', desc: 'Registration, scheduling & queue', icon: Fingerprint, email: 'lakshmi@drarchanaivf.in' },
+  { role: 'embryologist', label: 'Embryology Lab', desc: 'Oocytes, embryos & cryostorage', icon: Microscope, email: 'meera@drarchanaivf.in' },
+  { role: 'management', label: 'Management', desc: 'Operations, revenue & analytics', icon: Sparkles, email: 'rajesh@drarchanaivf.in' },
 ];
 
+const DEMO_PASSWORD = 'ChangeMe123!';
+const MIN_STEP_MS = AUTH_STEPS.length * 420 + 320;
+
 export function Login() {
-  const { login } = useApp();
+  const { login } = useAuth();
   const [selected, setSelected] = useState<Role>('doctor');
+  const [email, setEmail] = useState(ROLE_CARDS[0].email);
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [showPass, setShowPass] = useState(false);
   const [authenticating, setAuthenticating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const step = useSequence(AUTH_STEPS.length, 420, authenticating);
+  const attemptId = useRef(0);
 
-  useEffect(() => {
-    if (!authenticating) return;
-    const t = setTimeout(() => login(selected), AUTH_STEPS.length * 420 + 320);
-    return () => clearTimeout(t);
-  }, [authenticating, login, selected]);
+  const selectRole = (r: Role) => {
+    setSelected(r);
+    setEmail(ROLE_CARDS.find((c) => c.role === r)!.email);
+    setError(null);
+  };
+
+  const handleSubmit = () => {
+    if (authenticating) return;
+    setError(null);
+    setAuthenticating(true);
+    const id = ++attemptId.current;
+    const startedAt = Date.now();
+
+    login(email, password)
+      .then(() => {
+        // No further action needed here — once login() resolves, useAuth's
+        // `user` flips to non-null and AppShell swaps away from <Login />
+        // on its own. Nothing to clean up if this component has already unmounted.
+      })
+      .catch((err: unknown) => {
+        if (id !== attemptId.current) return; // a newer attempt superseded this one
+        const elapsed = Date.now() - startedAt;
+        const remaining = Math.max(MIN_STEP_MS - elapsed, 0);
+        // Let the choreography finish its current step visually rather
+        // than snapping back mid-animation on a fast failure.
+        setTimeout(() => {
+          if (id !== attemptId.current) return;
+          setAuthenticating(false);
+          setError(
+            err instanceof ApiError
+              ? err.message
+              : 'Could not reach the clinical system. Check your connection and try again.'
+          );
+        }, Math.min(remaining, 600));
+      });
+  };
 
   const user = USERS[selected];
 
@@ -188,7 +230,7 @@ export function Login() {
                     return (
                       <button
                         key={r.role}
-                        onClick={() => setSelected(r.role)}
+                        onClick={() => selectRole(r.role)}
                         className={cn(
                           'press group relative overflow-hidden rounded-xl border p-3 text-left transition-all duration-250',
                           active
@@ -231,15 +273,17 @@ export function Login() {
               <div className="mt-5 space-y-3">
                 <Input
                   label="Employee ID or Email"
-                  defaultValue={user.email}
-                  key={user.email}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   icon={<Fingerprint className="h-3.5 w-3.5" />}
                 />
                 <div className="relative">
                   <Input
                     label="Password"
                     type={showPass ? 'text' : 'password'}
-                    defaultValue="••••••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     icon={<Lock className="h-3.5 w-3.5" />}
                   />
                   <button
@@ -250,6 +294,14 @@ export function Login() {
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                <p className="text-[11px] text-ink-400">Demo password: {DEMO_PASSWORD}</p>
+
+                {error && (
+                  <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                    <p className="text-[12.5px] leading-relaxed text-rose-700">{error}</p>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 flex items-center justify-between">
@@ -267,7 +319,8 @@ export function Login() {
                 size="lg"
                 className="mt-6 w-full"
                 iconRight={<ArrowRight className="h-4 w-4" />}
-                onClick={() => setAuthenticating(true)}
+                onClick={handleSubmit}
+                disabled={!email || !password}
               >
                 Sign In Securely
               </Button>

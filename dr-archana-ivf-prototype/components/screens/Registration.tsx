@@ -2,9 +2,12 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
-import { cn } from '@/lib/utils';
+import { cn, ageFromDOB, initialsOf } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Input, Select, Field, InfoNote, Avatar } from '@/components/ui/primitives';
-import { Check, ChevronLeft, ChevronRight, UserPlus, Users, Heart, FileCheck, Link2, ShieldCheck, Sparkles } from 'lucide-react';
+import { useCreateCouple } from '@/lib/api/patients';
+import { ApiError } from '@/lib/api/client';
+import type { CoupleOut } from '@/lib/api/types';
+import { Check, ChevronLeft, ChevronRight, UserPlus, Users, Heart, FileCheck, Link2, ShieldCheck, Sparkles, AlertTriangle } from 'lucide-react';
 
 const STEPS = [
   { id: 0, label: 'Patient Details', icon: UserPlus },
@@ -15,46 +18,81 @@ const STEPS = [
 ];
 
 export function Registration() {
-  const { go, toast } = useApp();
+  const { go, toast, openPatient } = useApp();
   const [step, setStep] = useState(0);
-  const [creating, setCreating] = useState(false);
   const [done, setDone] = useState(false);
+  const [createdCouple, setCreatedCouple] = useState<CoupleOut | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const createCouple = useCreateCouple();
 
   const [form, setForm] = useState({
-    name: 'Priya Raman',
-    dob: '1994-09-18',
-    phone: '+91 98407 21894',
-    email: 'priya.raman@gmail.com',
-    address: 'T-4, Anandam Apartments, Alwarpet, Chennai 600018',
+    name: '',
+    dob: '',
+    phone: '',
+    email: '',
+    address: '',
     blood: 'B Positive',
-    emergency: 'Arjun Kumar (Spouse) — +91 98410 33127',
-    referral: 'Dr. Sudha Menon, Apollo Chennai',
-    pName: 'Arjun Kumar',
-    pDob: '1992-05-22',
-    pPhone: '+91 98410 33127',
-    pOccupation: 'Senior Software Engineer',
+    emergency: '',
+    referral: '',
+    pName: '',
+    pDob: '',
+    pPhone: '',
+    pOccupation: '',
     pBlood: 'O Positive',
     infType: 'Primary Infertility',
-    duration: '6 Years',
+    duration: '',
     pregnancies: '0',
-    iui: '2',
+    iui: '0',
     ivf: '0',
-    history: 'Two failed IUI cycles at another centre (2024, 2025). No surgical history.',
+    history: '',
   });
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const create = () => {
-    setCreating(true);
-    setTimeout(() => {
-      setCreating(false);
-      setDone(true);
-      toast({
-        title: 'Couple created successfully',
-        body: 'Priya Raman and Arjun Kumar are now linked as a treatment case.',
-        tone: 'success',
-      });
-    }, 1700);
+    setError(null);
+    createCouple.mutate(
+      {
+        female_patient: {
+          full_name: form.name,
+          date_of_birth: form.dob || null,
+          gender: 'female',
+          blood_group: form.blood,
+          phone: form.phone || null,
+          email: form.email || null,
+          address: form.address || null,
+          emergency_contact: form.emergency || null,
+          referral_source: form.referral || null,
+        },
+        male_patient: {
+          full_name: form.pName,
+          date_of_birth: form.pDob || null,
+          gender: 'male',
+          blood_group: form.pBlood,
+          phone: form.pPhone || null,
+          occupation: form.pOccupation || null,
+        },
+        infertility_type: form.infType,
+        infertility_duration: form.duration || null,
+        previous_iui_cycles: Number(form.iui) || 0,
+        previous_ivf_cycles: Number(form.ivf) || 0,
+        previous_treatment_notes: form.history || null,
+      },
+      {
+        onSuccess: (couple) => {
+          setCreatedCouple(couple);
+          setDone(true);
+          toast({
+            title: 'Couple created successfully',
+            body: `${couple.female_patient.full_name} and ${couple.male_patient.full_name} are now linked as a treatment case.`,
+            tone: 'success',
+          });
+        },
+        onError: (err) => {
+          setError(err instanceof ApiError ? err.message : 'Could not create the couple. Please try again.');
+        },
+      }
+    );
   };
 
   if (done) {
@@ -78,9 +116,9 @@ export function Registration() {
         <Card className="mt-8 w-full p-5">
           <div className="flex items-center justify-center gap-5">
             <div className="text-center">
-              <Avatar initials="PR" size="lg" gradient="from-brand-500 to-teal-600" className="mx-auto" />
+              <Avatar initials={initialsOf(form.name)} size="lg" gradient="from-brand-500 to-teal-600" className="mx-auto" />
               <p className="mt-2 text-[13.5px] font-semibold text-ink-900">{form.name}</p>
-              <p className="tnum text-[11.5px] text-ink-500">DAIVF-2026-00428</p>
+              <p className="tnum text-[11.5px] text-ink-500">{createdCouple?.female_patient.uhid}</p>
             </div>
 
             <div className="flex flex-col items-center">
@@ -93,16 +131,20 @@ export function Registration() {
             </div>
 
             <div className="text-center">
-              <Avatar initials="AK" size="lg" gradient="from-sky-500 to-blue-600" className="mx-auto" />
+              <Avatar initials={initialsOf(form.pName)} size="lg" gradient="from-sky-500 to-blue-600" className="mx-auto" />
               <p className="mt-2 text-[13.5px] font-semibold text-ink-900">{form.pName}</p>
-              <p className="tnum text-[11.5px] text-ink-500">DAIVF-2026-00429</p>
+              <p className="tnum text-[11.5px] text-ink-500">{createdCouple?.male_patient.uhid}</p>
             </div>
           </div>
         </Card>
 
         <div className="mt-6 flex gap-3">
-          <Button onClick={() => { setDone(false); setStep(0); }}>Register another couple</Button>
-          <Button variant="primary" iconRight={<ChevronRight className="h-4 w-4" />} onClick={() => go('workspace')}>
+          <Button onClick={() => { setDone(false); setCreatedCouple(null); setStep(0); }}>Register another couple</Button>
+          <Button
+            variant="primary"
+            iconRight={<ChevronRight className="h-4 w-4" />}
+            onClick={() => createdCouple && openPatient(createdCouple.female_patient.id)}
+          >
             Start Consultation
           </Button>
         </div>
@@ -184,7 +226,13 @@ export function Registration() {
           {step === 0 && (
             <div className="animate-fade-up grid gap-4 sm:grid-cols-2">
               <Input label="Full Name" value={form.name} onChange={(e) => set('name', e.target.value)} />
-              <Input label="Date of Birth" type="date" value={form.dob} onChange={(e) => set('dob', e.target.value)} hint="Age 31 years" />
+              <Input
+                label="Date of Birth"
+                type="date"
+                value={form.dob}
+                onChange={(e) => set('dob', e.target.value)}
+                hint={form.dob ? `Age ${ageFromDOB(form.dob)} years` : undefined}
+              />
               <Input label="Mobile Number" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
               <Input label="Email Address" value={form.email} onChange={(e) => set('email', e.target.value)} />
               <Select label="Blood Group" value={form.blood} onChange={(e) => set('blood', e.target.value)}>
@@ -210,7 +258,13 @@ export function Registration() {
               </InfoNote>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Full Name" value={form.pName} onChange={(e) => set('pName', e.target.value)} />
-                <Input label="Date of Birth" type="date" value={form.pDob} onChange={(e) => set('pDob', e.target.value)} hint="Age 34 years" />
+                <Input
+                  label="Date of Birth"
+                  type="date"
+                  value={form.pDob}
+                  onChange={(e) => set('pDob', e.target.value)}
+                  hint={form.pDob ? `Age ${ageFromDOB(form.pDob)} years` : undefined}
+                />
                 <Input label="Mobile Number" value={form.pPhone} onChange={(e) => set('pPhone', e.target.value)} />
                 <Input label="Occupation" value={form.pOccupation} onChange={(e) => set('pOccupation', e.target.value)} />
                 <Select label="Blood Group" value={form.pBlood} onChange={(e) => set('pBlood', e.target.value)}>
@@ -300,28 +354,28 @@ export function Registration() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Card className="p-4">
                   <div className="mb-3 flex items-center gap-2.5">
-                    <Avatar initials="PR" size="md" gradient="from-brand-500 to-teal-600" />
+                    <Avatar initials={initialsOf(form.name)} size="md" gradient="from-brand-500 to-teal-600" />
                     <div>
-                      <p className="text-[13.5px] font-semibold text-ink-900">{form.name}</p>
-                      <p className="tnum text-[11.5px] text-brand-700">DAIVF-2026-00428</p>
+                      <p className="text-[13.5px] font-semibold text-ink-900">{form.name || 'Patient'}</p>
+                      <p className="text-[11.5px] text-brand-700">UHID assigned on creation</p>
                     </div>
                   </div>
-                  <Field label="Date of Birth" value="18 September 1994" />
+                  <Field label="Date of Birth" value={form.dob ? new Date(form.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'} />
                   <div className="mt-2.5"><Field label="Blood Group" value={form.blood} /></div>
-                  <div className="mt-2.5"><Field label="Mobile" value={form.phone} /></div>
+                  <div className="mt-2.5"><Field label="Mobile" value={form.phone || '—'} /></div>
                 </Card>
 
                 <Card className="p-4">
                   <div className="mb-3 flex items-center gap-2.5">
-                    <Avatar initials="AK" size="md" gradient="from-sky-500 to-blue-600" />
+                    <Avatar initials={initialsOf(form.pName)} size="md" gradient="from-sky-500 to-blue-600" />
                     <div>
-                      <p className="text-[13.5px] font-semibold text-ink-900">{form.pName}</p>
-                      <p className="tnum text-[11.5px] text-sky-700">DAIVF-2026-00429</p>
+                      <p className="text-[13.5px] font-semibold text-ink-900">{form.pName || 'Partner'}</p>
+                      <p className="text-[11.5px] text-sky-700">UHID assigned on creation</p>
                     </div>
                   </div>
-                  <Field label="Date of Birth" value="22 May 1992" />
+                  <Field label="Date of Birth" value={form.pDob ? new Date(form.pDob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'} />
                   <div className="mt-2.5"><Field label="Blood Group" value={form.pBlood} /></div>
-                  <div className="mt-2.5"><Field label="Occupation" value={form.pOccupation} /></div>
+                  <div className="mt-2.5"><Field label="Occupation" value={form.pOccupation || '—'} /></div>
                 </Card>
               </div>
 
@@ -345,6 +399,13 @@ export function Registration() {
           )}
         </div>
 
+        {step === 4 && error && (
+          <div className="mx-5 mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+            <p className="text-[12.5px] leading-relaxed text-rose-700">{error}</p>
+          </div>
+        )}
+
         {/* ============ NAV ============ */}
         <div className="flex items-center justify-between border-t border-ink-100 bg-ink-50/50 px-5 py-4">
           <Button
@@ -364,8 +425,14 @@ export function Registration() {
               Continue
             </Button>
           ) : (
-            <Button variant="primary" loading={creating} icon={<Sparkles className="h-4 w-4" />} onClick={create}>
-              {creating ? 'Creating…' : 'Create Couple & Start Consultation'}
+            <Button
+              variant="primary"
+              loading={createCouple.isPending}
+              icon={<Sparkles className="h-4 w-4" />}
+              disabled={!form.name || !form.pName || createCouple.isPending}
+              onClick={create}
+            >
+              {createCouple.isPending ? 'Creating…' : 'Create Couple & Start Consultation'}
             </Button>
           )}
         </div>

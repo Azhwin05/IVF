@@ -36,3 +36,9 @@ tsconfig.tsbuildinfo
 # Editor / tooling
 .vscode
 .claude
+
+# Backend runtime state
+backend/celerybeat-schedule
+__pycache__/
+*.pyc
+.pytest_cache/

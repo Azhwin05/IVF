@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/lib/store';
-import { USERS, NOTIFICATIONS } from '@/lib/data';
+import { NOTIFICATIONS } from '@/lib/data';
 import { SCREEN_TITLES } from './nav';
 import { cn, TONE, TODAY } from '@/lib/utils';
 import { Avatar, Badge, Button } from '@/components/ui/primitives';
@@ -23,13 +23,12 @@ import {
 } from 'lucide-react';
 
 export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
-  const { role, screen, go, back, history, setPaletteOpen, notifOpen, setNotifOpen, toast } = useApp();
+  const { user, screen, go, back, history, setPaletteOpen, notifOpen, setNotifOpen, toast } = useApp();
   const [quickOpen, setQuickOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const clock = useClock();
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const user = role ? USERS[role] : null;
   const unread = NOTIFICATIONS.filter((n) => n.unread).length;
 
   useEffect(() => {

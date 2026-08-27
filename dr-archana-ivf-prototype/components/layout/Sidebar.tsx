@@ -2,7 +2,6 @@
 
 import React, { useRef, useLayoutEffect, useState } from 'react';
 import { useApp } from '@/lib/store';
-import { USERS } from '@/lib/data';
 import { navForRole, SECTIONS } from './nav';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/primitives';
@@ -19,12 +18,11 @@ export function Sidebar({
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }) {
-  const { role, screen, go, logout, setPaletteOpen } = useApp();
+  const { role, user, screen, go, logout, setPaletteOpen } = useApp();
   const listRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState({ top: 0, height: 0, visible: false });
 
   const items = role ? navForRole(role) : [];
-  const user = role ? USERS[role] : null;
 
   const navigate = (id: (typeof items)[number]['id']) => {
     go(id);

@@ -10,7 +10,7 @@ import { ShieldCheck, Check, X, Lock, Users2, Info } from 'lucide-react';
 const ROLES: Role[] = ['doctor', 'receptionist', 'embryologist', 'management'];
 
 export function Access() {
-  const { role: currentRole, toast } = useApp();
+  const { role: currentRole, user: currentUser, toast } = useApp();
   const [view, setView] = useState<Role>(currentRole ?? 'doctor');
   const matrix = ROLE_MATRIX[view];
   const user = USERS[view];
@@ -25,8 +25,9 @@ export function Access() {
 
       <InfoNote tone="brand" icon={<ShieldCheck className="h-4 w-4" />}>
         You are currently signed in as{' '}
-        <span className="font-semibold">{USERS[currentRole ?? 'doctor'].title}</span>. Sign out and
-        select a different role on the login screen to experience how the interface adapts.
+        <span className="font-semibold">{currentUser?.title ?? USERS[currentRole ?? 'doctor'].title}</span>.
+        Sign out and select a different demo account on the login screen to experience how the
+        interface adapts.
       </InfoNote>
 
       {/* ============ ROLE SWITCHER ============ */}

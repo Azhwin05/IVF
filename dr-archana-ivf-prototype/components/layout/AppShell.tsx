@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/store';
+import { useAuth } from '@/lib/auth';
 import { useHotkey } from '@/lib/hooks';
 import { canAccess } from './nav';
 import { Sidebar } from './Sidebar';
@@ -116,6 +117,7 @@ function ScreenRouter() {
 
 export function AppShell() {
   const { role, toasts, dismissToast, setPaletteOpen, paletteOpen, screen } = useApp();
+  const { initializing } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -126,6 +128,17 @@ export function AppShell() {
   useEffect(() => {
     setMobileNavOpen(false);
   }, [screen]);
+
+  // Silent-refresh (restoring a session from the httpOnly cookie on page
+  // load) is in flight — hold off rendering Login so an already-signed-in
+  // user doesn't see a login flash before landing back on their screen.
+  if (initializing) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-ink-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+      </div>
+    );
+  }
 
   if (!role) return <Login />;
 

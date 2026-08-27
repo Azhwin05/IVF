@@ -1,19 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import {
   METRICS,
-  APPOINTMENTS,
   CLINICAL_ALERTS,
   ACTIVITY_FEED,
   CYCLE_DISTRIBUTION,
-  USERS,
 } from '@/lib/data';
 import { cn, TONE, formatINR, TODAY } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, Avatar, SectionTitle, Skeleton } from '@/components/ui/primitives';
 import { Sparkline, DonutChart } from '@/components/ui/charts';
-import { useCountUp, useSimulatedLoad } from '@/lib/hooks';
+import { useCountUp } from '@/lib/hooks';
+import { useDashboardMetrics, useCycleDistribution } from '@/lib/api/reports';
+import { useAppointments } from '@/lib/api/appointments';
+import { usePatients } from '@/lib/api/patients';
 import {
   CalendarClock,
   Users2,
@@ -74,10 +75,63 @@ function MetricTile({
   );
 }
 
+const APPOINTMENT_STATUS_TONE: Record<string, keyof typeof TONE> = {
+  scheduled: 'scheduled',
+  arrived: 'active',
+  waiting: 'attention',
+  in_consultation: 'active',
+  completed: 'completed',
+  cancelled: 'cancelled',
+  no_show: 'critical',
+};
+
+const STAGE_META: Record<string, { label: string; color: string }> = {
+  assessment: { label: 'Assessment', color: '#94A3B8' },
+  stimulation: { label: 'Stimulation', color: '#10B981' },
+  trigger: { label: 'Trigger', color: '#F97316' },
+  retrieval: { label: 'Retrieval', color: '#F59E0B' },
+  embryology: { label: 'Embryology', color: '#8B5CF6' },
+  transfer: { label: 'Transfer', color: '#0EA5E9' },
+  pregnancy_followup: { label: 'Follow-up', color: '#EC4899' },
+};
+
 export function Dashboard() {
-  const { go, toast, role } = useApp();
-  const loading = useSimulatedLoad([], 380);
-  const user = USERS[role ?? 'doctor'];
+  const { go, toast, user, openPatient } = useApp();
+  const displayName = user?.name ?? 'there';
+
+  const dashboardQuery = useDashboardMetrics();
+  const cycleDistQuery = useCycleDistribution();
+  const appointmentsQuery = useAppointments();
+  const patientsQuery = usePatients();
+  const loading = dashboardQuery.isLoading;
+
+  const patientNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of patientsQuery.data ?? []) map[p.id] = p.full_name;
+    return map;
+  }, [patientsQuery.data]);
+
+  const liveMetrics = dashboardQuery.data;
+  const metrics = {
+    appointments: { ...METRICS.appointments, value: liveMetrics?.appointments_today ?? METRICS.appointments.value },
+    waiting: { ...METRICS.waiting, value: liveMetrics?.patients_waiting ?? METRICS.waiting.value },
+    cycles: { ...METRICS.cycles, value: liveMetrics?.active_ivf_cycles ?? METRICS.cycles.value },
+    collection: {
+      ...METRICS.collection,
+      value: liveMetrics ? Math.round(liveMetrics.todays_collection_paise / 100) : METRICS.collection.value,
+    },
+    procedures: METRICS.procedures,
+    followups: METRICS.followups,
+  };
+
+  const cycleDistribution = (cycleDistQuery.data ?? []).map((c) => ({
+    label: STAGE_META[c.stage]?.label ?? c.stage,
+    value: c.count,
+    color: STAGE_META[c.stage]?.color ?? '#94A3B8',
+  }));
+  const totalActiveCycles = cycleDistribution.reduce((sum, c) => sum + c.value, 0);
+
+  const todaysAppointments = appointmentsQuery.data ?? [];
 
   const hour = 9;
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -94,7 +148,7 @@ export function Dashboard() {
             </span>
           </div>
           <h1 className="tracking-display font-display text-[26px] leading-tight text-ink-900 sm:text-[34px]">
-            {greeting}, {user.name.split(' ')[0]} {user.name.split(' ')[1]?.replace('S.', '')}
+            {greeting}, {displayName.split(' ')[0]} {displayName.split(' ')[1]?.replace('S.', '')}
           </h1>
           <p className="mt-1 text-[13px] text-ink-500 sm:text-[14px]">
             Here is your clinical and operational overview for today.
@@ -123,12 +177,12 @@ export function Dashboard() {
             ))
           : (
             <>
-              <MetricTile icon={CalendarClock} metric={METRICS.appointments} delay={0} accent="bg-brand-50 text-brand-700 ring-brand-600/12" />
-              <MetricTile icon={Users2} metric={METRICS.waiting} delay={1} accent="bg-amber-50 text-amber-700 ring-amber-600/12" />
-              <MetricTile icon={Activity} metric={METRICS.cycles} delay={2} accent="bg-violet-50 text-violet-700 ring-violet-600/12" />
-              <MetricTile icon={IndianRupee} metric={METRICS.collection} currency delay={3} accent="bg-emerald-50 text-emerald-700 ring-emerald-600/12" />
-              <MetricTile icon={Stethoscope} metric={METRICS.procedures} delay={4} accent="bg-sky-50 text-sky-700 ring-sky-600/12" />
-              <MetricTile icon={BellRing} metric={METRICS.followups} delay={5} accent="bg-rose-50 text-rose-700 ring-rose-600/12" />
+              <MetricTile icon={CalendarClock} metric={metrics.appointments} delay={0} accent="bg-brand-50 text-brand-700 ring-brand-600/12" />
+              <MetricTile icon={Users2} metric={metrics.waiting} delay={1} accent="bg-amber-50 text-amber-700 ring-amber-600/12" />
+              <MetricTile icon={Activity} metric={metrics.cycles} delay={2} accent="bg-violet-50 text-violet-700 ring-violet-600/12" />
+              <MetricTile icon={IndianRupee} metric={metrics.collection} currency delay={3} accent="bg-emerald-50 text-emerald-700 ring-emerald-600/12" />
+              <MetricTile icon={Stethoscope} metric={metrics.procedures} delay={4} accent="bg-sky-50 text-sky-700 ring-sky-600/12" />
+              <MetricTile icon={BellRing} metric={metrics.followups} delay={5} accent="bg-rose-50 text-rose-700 ring-rose-600/12" />
             </>
           )}
       </div>
@@ -140,7 +194,7 @@ export function Dashboard() {
           <CardHeader
             icon={<CalendarClock className="h-4 w-4" />}
             title="Today's Clinical Schedule"
-            subtitle="6 appointments · 1 patient currently waiting"
+            subtitle={`${todaysAppointments.length} appointments · ${metrics.waiting.value} patient${metrics.waiting.value === 1 ? '' : 's'} currently waiting`}
             action={
               <Button size="sm" variant="ghost" iconRight={<ChevronRight className="h-3.5 w-3.5" />} onClick={() => go('patients')}>
                 All patients
@@ -148,37 +202,48 @@ export function Dashboard() {
             }
           />
           <div className="stagger px-2 pb-2">
-            {APPOINTMENTS.map((a, i) => (
-              <button
-                key={a.id}
-                style={{ ['--i' as string]: i }}
-                onClick={() => (a.patientId === 'DAIVF-2026-00428' ? go('workspace') : toast({ title: a.patient, body: `Opening ${a.visit.toLowerCase()}.`, tone: 'info' }))}
-                className="group flex w-full items-center gap-3.5 rounded-xl px-3 py-3 text-left transition-colors hover:bg-ink-50"
-              >
-                <div className="w-[52px] shrink-0 text-center">
-                  <p className="tnum text-[14px] font-semibold text-ink-900">{a.time}</p>
-                  <p className="text-[10px] uppercase tracking-wide text-ink-400">
-                    {parseInt(a.time) < 12 ? 'AM' : 'PM'}
-                  </p>
-                </div>
+            {todaysAppointments.length === 0 && !appointmentsQuery.isLoading && (
+              <p className="px-3 py-6 text-center text-[12.5px] text-ink-400">No appointments scheduled for today.</p>
+            )}
+            {todaysAppointments.map((a, i) => {
+              const patientName = patientNameById[a.patient_id] ?? 'Unknown patient';
+              const initials = patientName.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+              const tone = APPOINTMENT_STATUS_TONE[a.status] ?? 'neutral';
+              const time = new Date(a.scheduled_at);
+              return (
+                <button
+                  key={a.id}
+                  style={{ ['--i' as string]: i }}
+                  onClick={() => openPatient(a.patient_id)}
+                  className="group flex w-full items-center gap-3.5 rounded-xl px-3 py-3 text-left transition-colors hover:bg-ink-50"
+                >
+                  <div className="w-[52px] shrink-0 text-center">
+                    <p className="tnum text-[14px] font-semibold text-ink-900">
+                      {time.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: false })}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wide text-ink-400">
+                      {time.getHours() < 12 ? 'AM' : 'PM'}
+                    </p>
+                  </div>
 
-                <div className={cn('h-9 w-[3px] shrink-0 rounded-full', TONE[a.tone].solid)} />
+                  <div className={cn('h-9 w-[3px] shrink-0 rounded-full', TONE[tone].solid)} />
 
-                <Avatar initials={a.initials} size="sm" gradient="from-ink-400 to-ink-600" />
+                  <Avatar initials={initials} size="sm" gradient="from-ink-400 to-ink-600" />
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13.5px] font-medium text-ink-900">{a.patient}</p>
-                  <p className="truncate text-[12px] text-ink-500">
-                    {a.visit} · <span className="text-ink-400">{a.room}</span>
-                  </p>
-                </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13.5px] font-medium text-ink-900">{patientName}</p>
+                    <p className="truncate text-[12px] text-ink-500">
+                      {a.visit_type} · <span className="text-ink-400">{a.channel.replace('_', ' ')}</span>
+                    </p>
+                  </div>
 
-                <Badge tone={a.tone} size="sm">
-                  {a.status}
-                </Badge>
-                <ChevronRight className="h-4 w-4 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-600" />
-              </button>
-            ))}
+                  <Badge tone={tone} size="sm">
+                    {a.status.replace('_', ' ')}
+                  </Badge>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-600" />
+                </button>
+              );
+            })}
           </div>
         </Card>
 
@@ -238,14 +303,18 @@ export function Dashboard() {
           <CardHeader
             icon={<Activity className="h-4 w-4" />}
             title="Active IVF Cycle Distribution"
-            subtitle="12 cycles across the treatment pipeline"
+            subtitle={`${totalActiveCycles} cycle${totalActiveCycles === 1 ? '' : 's'} across the treatment pipeline`}
           />
           <div className="px-5 pb-5">
-            <DonutChart
-              data={CYCLE_DISTRIBUTION.map((c) => ({ label: c.stage, value: c.count, color: c.color }))}
-              centerLabel="Active cycles"
-              size={168}
-            />
+            {cycleDistribution.length > 0 ? (
+              <DonutChart data={cycleDistribution} centerLabel="Active cycles" size={168} />
+            ) : (
+              <DonutChart
+                data={CYCLE_DISTRIBUTION.map((c) => ({ label: c.stage, value: c.count, color: c.color }))}
+                centerLabel="Active cycles"
+                size={168}
+              />
+            )}
           </div>
         </Card>
 

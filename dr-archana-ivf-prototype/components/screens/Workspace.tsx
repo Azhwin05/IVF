@@ -12,7 +12,8 @@ import {
   PACKAGE,
   TIMELINE,
 } from '@/lib/data';
-import { cn, TONE, formatINR } from '@/lib/utils';
+import { usePatientSummary, useCoupleForPatient } from '@/lib/api/patients';
+import { cn, TONE, formatINR, ageFromDOB, initialsOf } from '@/lib/utils';
 import {
   Card,
   CardHeader,
@@ -63,10 +64,52 @@ const TABS = [
 ];
 
 /* ============================================================
-   PATIENT HEADER — used across clinical screens
+   PATIENT HEADER — used across clinical screens (Workspace,
+   Timeline, Monitoring, Plan). Reads whichever patient was last
+   opened via useApp().openPatient — the old build's single
+   hardcoded PATIENT constant is now only a fallback for the
+   seeded demo record, matched by uhid, purely for visual
+   continuity of that one demo story.
    ============================================================ */
 export function PatientHeader({ compact }: { compact?: boolean }) {
-  const { go } = useApp();
+  const { go, selectedPatientId } = useApp();
+  const summaryQuery = usePatientSummary(selectedPatientId);
+  const coupleQuery = useCoupleForPatient(selectedPatientId);
+
+  if (!selectedPatientId) {
+    return (
+      <Card className="flex flex-col items-center gap-3 p-8 text-center">
+        <p className="text-[13.5px] font-medium text-ink-700">No patient selected</p>
+        <p className="text-[12.5px] text-ink-500">Open a patient from the registry to view their chart.</p>
+        <Button size="sm" onClick={() => go('patients')}>Go to Patient Registry</Button>
+      </Card>
+    );
+  }
+
+  if (summaryQuery.isLoading || !summaryQuery.data) {
+    return (
+      <Card className="p-5">
+        <div className="flex items-center gap-5">
+          <div className="h-16 w-16 animate-pulse rounded-full bg-ink-100" />
+          <div className="flex-1 space-y-2">
+            <div className="h-5 w-48 animate-pulse rounded bg-ink-100" />
+            <div className="h-3.5 w-64 animate-pulse rounded bg-ink-100" />
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  const summary = summaryQuery.data;
+  const isDemoPatient = summary.uhid === PATIENT.id;
+  const couple = coupleQuery.data;
+  const partner = couple
+    ? couple.female_patient.id === selectedPatientId
+      ? couple.male_patient
+      : couple.female_patient
+    : null;
+  const age = ageFromDOB(summary.date_of_birth);
+
   return (
     <Card className="overflow-hidden">
       <div className="relative">
@@ -75,7 +118,7 @@ export function PatientHeader({ compact }: { compact?: boolean }) {
 
         <div className="relative flex flex-wrap items-start gap-5 p-5">
           <div className="relative">
-            <Avatar initials={PATIENT.initials} size="xl" gradient="from-brand-500 to-teal-600" ring />
+            <Avatar initials={initialsOf(summary.full_name)} size="xl" gradient="from-brand-500 to-teal-600" ring />
             <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 ring-2 ring-white">
               <Activity className="h-2.5 w-2.5 text-white" strokeWidth={3} />
             </span>
@@ -83,42 +126,46 @@ export function PatientHeader({ compact }: { compact?: boolean }) {
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="tracking-display text-[20px] font-semibold text-ink-900 sm:text-[24px]">{PATIENT.name}</h1>
-              <Badge tone="active" wrap className="max-w-full">Active IVF Cycle — Stimulation Day {PATIENT.cycleDay}</Badge>
+              <h1 className="tracking-display text-[20px] font-semibold text-ink-900 sm:text-[24px]">{summary.full_name}</h1>
+              <Badge tone="active" wrap className="max-w-full">
+                {isDemoPatient ? `Active IVF Cycle — Stimulation Day ${PATIENT.cycleDay}` : 'Patient Chart'}
+              </Badge>
             </div>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-500">
-              <span className="tnum font-medium text-ink-700">{PATIENT.id}</span>
-              <span>{PATIENT.age} years</span>
-              <span className="flex items-center gap-1">
-                <Droplet className="h-3 w-3 text-rose-500" /> {PATIENT.bloodGroup}
-              </span>
-              <span className="flex items-center gap-1">
-                <Phone className="h-3 w-3" /> {PATIENT.phone}
-              </span>
-              {!compact && (
+              <span className="tnum font-medium text-ink-700">{summary.uhid}</span>
+              {age !== null && <span>{age} years</span>}
+              {summary.blood_group && (
                 <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> Alwarpet, Chennai
+                  <Droplet className="h-3 w-3 text-rose-500" /> {summary.blood_group}
+                </span>
+              )}
+              {summary.phone && (
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" /> {summary.phone}
                 </span>
               )}
             </div>
 
             {/* Couple linkage — deliberately prominent */}
-            <div className="mt-3.5 inline-flex items-center gap-3 rounded-xl border border-brand-200/70 bg-brand-50/60 py-2 pl-2 pr-4">
-              <Avatar initials={PARTNER.initials} size="sm" gradient="from-sky-500 to-blue-600" />
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <Link2 className="h-3 w-3 text-brand-600" />
-                  <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-brand-700">
-                    Linked Treatment Couple
-                  </span>
+            {partner && (
+              <div className="mt-3.5 inline-flex items-center gap-3 rounded-xl border border-brand-200/70 bg-brand-50/60 py-2 pl-2 pr-4">
+                <Avatar initials={initialsOf(partner.full_name)} size="sm" gradient="from-sky-500 to-blue-600" />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <Link2 className="h-3 w-3 text-brand-600" />
+                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-brand-700">
+                      Linked Treatment Couple
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[13px] font-medium text-ink-900">
+                    {partner.full_name}
+                    {ageFromDOB(partner.date_of_birth) !== null && ` · ${ageFromDOB(partner.date_of_birth)} yrs`}
+                    <span className="tnum ml-2 text-[11.5px] font-normal text-ink-500">{partner.uhid}</span>
+                  </p>
                 </div>
-                <p className="mt-0.5 text-[13px] font-medium text-ink-900">
-                  {PARTNER.name} · {PARTNER.age} yrs
-                  <span className="tnum ml-2 text-[11.5px] font-normal text-ink-500">{PARTNER.id}</span>
-                </p>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="flex shrink-0 flex-col gap-2">

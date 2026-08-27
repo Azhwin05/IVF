@@ -84,3 +84,21 @@ export function follicleTone(mm: number) {
 }
 
 export const TODAY = '29 July 2026';
+
+/** Age in whole years from an ISO date-of-birth string, as of TODAY's
+ * demo date (not the real wall-clock date — see TODAY's own comment
+ * about matching the seeded demo timeline). */
+export function ageFromDOB(dob: string | null): number | null {
+  if (!dob) return null;
+  const birth = new Date(dob);
+  const reference = new Date('2026-07-29');
+  let age = reference.getFullYear() - birth.getFullYear();
+  const m = reference.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && reference.getDate() < birth.getDate())) age -= 1;
+  return age;
+}
+
+export function initialsOf(fullName: string): string {
+  const parts = fullName.split(' ').filter(Boolean);
+  return parts.slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
+}
