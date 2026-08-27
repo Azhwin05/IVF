@@ -1,0 +1,67 @@
+# Production overrides for the hospital's on-premise server, per
+# ARCHITECTURE.md §5/§8. Nothing except Nginx exposes a port to the
+# host network. Resource limits are conservative starting points —
+# tune against Phase 8's load testing results, not guessed numbers.
+
+services:
+  postgres:
+    deploy:
+      resources:
+        limits: { cpus: "2", memory: 2G}
+    read_only: false  # Postgres needs write access to its data dir; do not force read_only here
+
+  redis:
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512M }
+    command: ["redis-server", "--maxmemory", "400mb", "--maxmemory-policy", "allkeys-lru"]
+
+  minio:
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1G }
+
+  api:
+    build:
+      target: runtime
+    environment:
+      ENVIRONMENT: production
+    deploy:
+      resources:
+        limits: { cpus: "2", memory: 1G }
+      replicas: 2  # two API replicas behind Nginx for zero-downtime redeploys
+    read_only: true
+    tmpfs: [/tmp]
+
+  worker:
+    environment:
+      ENVIRONMENT: production
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 768M }
+
+  beat:
+    environment:
+      ENVIRONMENT: production
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 256M }
+
+  frontend:
+    build:
+      target: runner
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+    read_only: true
+    tmpfs: [/tmp]
+
+  nginx:
+    ports:
+      - "443:443"
+      - "80:80"  # HTTP -> HTTPS redirect only, see nginx/nginx.conf
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M }

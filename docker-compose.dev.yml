@@ -1,0 +1,50 @@
+# Local development overrides — exposed ports for debugging, hot reload
+# via bind mounts, dev-friendly commands. Never use this file's port
+# exposure pattern in production (see docker-compose.prod.yml).
+
+services:
+  postgres:
+    ports: ["5432:5432"]  # exposed locally only for psql/DBeaver debugging
+
+  redis:
+    ports: ["6379:6379"]
+
+  minio:
+    ports:
+      - "9500:9000"  # host 9000 was already in use on this machine
+      - "9501:9001"  # MinIO console
+
+  api:
+    build:
+      target: runtime
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./backend:/app
+    ports: ["8600:8000"]  # host 8000 was already in use on this machine
+    environment:
+      ENVIRONMENT: local
+
+  worker:
+    volumes:
+      - ./backend:/app
+    environment:
+      ENVIRONMENT: local
+
+  beat:
+    volumes:
+      - ./backend:/app
+    environment:
+      ENVIRONMENT: local
+
+  frontend:
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./dr-archana-ivf-prototype:/app
+      - /app/node_modules
+      - /app/.next
+    ports: ["3000:3000"]
+    environment:
+      NODE_ENV: development
+
+  nginx:
+    ports: ["8080:80"]  # plain HTTP locally; TLS only matters for staging/prod

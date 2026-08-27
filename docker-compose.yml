@@ -1,0 +1,149 @@
+# Base compose file — shared service definitions. Combine with
+# docker-compose.dev.yml (local development, hot reload, exposed ports
+# for debugging) or docker-compose.prod.yml (hospital server: internal
+# networks only, resource limits, no debug ports) per ARCHITECTURE.md §5.
+#
+#   Local dev:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#   Production: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: archana-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-archana_hmis}
+      POSTGRES_USER: ${POSTGRES_USER:-archana}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-archana} -d ${POSTGRES_DB:-archana_hmis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    container_name: archana-redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks: [internal]
+
+  minio:
+    image: minio/minio:latest
+    container_name: archana-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks: [internal]
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: archana-api
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks: [internal]
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: archana-worker
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [internal]
+    healthcheck:
+      # Overrides the API image's inherited HEALTHCHECK (curl :8000/api/v1/health),
+      # which this process never serves — that always failed and left this
+      # container permanently reporting "unhealthy" despite working correctly.
+      # No -d node filter: "CMD" array form doesn't invoke a shell, so
+      # $HOSTNAME never expands and the ping matches no real node.
+      test: ["CMD", "celery", "-A", "app.workers.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: archana-beat
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info"]
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    healthcheck:
+      # Beat has no inspect-ping equivalent (it doesn't consume tasks) — the
+      # schedule file it writes to on every tick is the simplest real signal
+      # that the process is alive and iterating, not just running.
+      test: ["CMD-SHELL", "test -f /app/celerybeat-schedule || test -f celerybeat-schedule"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    networks: [internal]
+
+  frontend:
+    build:
+      context: ./dr-archana-ivf-prototype
+      dockerfile: Dockerfile
+    container_name: archana-frontend
+    env_file: .env
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [internal]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: archana-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on: [frontend, api]
+    restart: unless-stopped
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
