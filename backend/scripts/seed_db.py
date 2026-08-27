@@ -8,7 +8,7 @@ Run: python -m scripts.seed_db [--with-demo-data]
 """
 import asyncio
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 
@@ -51,6 +51,7 @@ async def seed_demo_clinical_data(session, staff: dict[str, User]) -> None:
     """Recreates the frontend's Priya Raman / Arjun Kumar demo story as
     real database rows, so the reconnected UI shows a believable, complete
     journey on day one — not an empty database."""
+    from app.cryostorage.models import CryoCustodyEvent, CryoLocation
     from app.embryology.models import Embryo, EmbryoStatus, OocyteAssessment
     from app.ivf.models import CycleStage, IVFCycle, MonitoringVisit
     from app.patients.models import Couple, Patient
@@ -107,7 +108,65 @@ async def seed_demo_clinical_data(session, staff: dict[str, User]) -> None:
             doctor_note="Follicular response is progressing appropriately.",
         ),
     ])
+    session.add(OocyteAssessment(
+        cycle_id=cycle.id, retrieval_date=date(2026, 8, 2),
+        oocytes_retrieved=14, mature_oocytes=11, normally_fertilised=8, fertilisation_method="ICSI",
+    ))
+
+    embryos = [
+        Embryo(cycle_id=cycle.id, label="E-01", day=5, grade="4AA", expansion="Expanded blastocyst",
+               icm_grade="A — tightly packed, many cells", trophectoderm_grade="A — cohesive epithelium",
+               quality_score=96, status=EmbryoStatus.SELECTED_FOR_TRANSFER, graded_by_id=staff["embryologist"].id,
+               embryologist_notes="Top quality blastocyst. Even expansion, no fragmentation. Recommended for fresh transfer."),
+        Embryo(cycle_id=cycle.id, label="E-02", day=5, grade="4AB", expansion="Expanded blastocyst",
+               icm_grade="A — prominent inner cell mass", trophectoderm_grade="B — few larger cells",
+               quality_score=88, status=EmbryoStatus.UNDER_REVIEW, graded_by_id=staff["embryologist"].id,
+               embryologist_notes="Excellent morphology. Selected for vitrification for future frozen transfer."),
+        Embryo(cycle_id=cycle.id, label="E-03", day=6, grade="3BB", expansion="Full blastocyst",
+               icm_grade="B — loosely grouped cells", trophectoderm_grade="B — moderate cell number",
+               quality_score=74, status=EmbryoStatus.UNDER_REVIEW, graded_by_id=staff["embryologist"].id,
+               embryologist_notes="Good quality Day 6 blastocyst. Delayed expansion but viable."),
+        Embryo(cycle_id=cycle.id, label="E-04", day=5, grade="3BC", expansion="Full blastocyst",
+               icm_grade="B — moderate quality", trophectoderm_grade="C — sparse, irregular cells",
+               quality_score=58, status=EmbryoStatus.UNDER_REVIEW, graded_by_id=staff["embryologist"].id,
+               embryologist_notes="Fair quality. Trophectoderm grading borderline. Awaiting joint review."),
+        Embryo(cycle_id=cycle.id, label="E-05", day=6, grade="3CC", expansion="Full blastocyst",
+               icm_grade="C — few cells", trophectoderm_grade="C — sparse cells",
+               quality_score=31, status=EmbryoStatus.NOT_SUITABLE, graded_by_id=staff["embryologist"].id,
+               embryologist_notes="Poor morphology on Day 6. Discussed with couple — not recommended for cryopreservation."),
+    ]
+    session.add_all(embryos)
+    await session.flush()
+
+    # E-02 and E-03 are vitrified and stored — matches the frontend's original
+    # CRYO_HIERARCHY fixture (Tank A / Canister 04 / Cane 02, Straws 03/04).
+    e02, e03 = embryos[1], embryos[2]
+    e02.status = EmbryoStatus.CRYOPRESERVED
+    e03.status = EmbryoStatus.CRYOPRESERVED
+    loc_e02 = CryoLocation(
+        tank="Tank A", canister="Canister 04", cane="Cane 02", goblet="Goblet 05", straw="Straw 03",
+        embryo_id=e02.id, frozen_at=date(2026, 8, 4), consent_verified=True, renewal_due=date(2027, 8, 4),
+    )
+    loc_e03 = CryoLocation(
+        tank="Tank A", canister="Canister 04", cane="Cane 02", goblet="Goblet 05", straw="Straw 04",
+        embryo_id=e03.id, frozen_at=date(2026, 8, 5), consent_verified=True, renewal_due=date(2027, 8, 5),
+    )
+    session.add_all([loc_e02, loc_e03])
+    await session.flush()
+
+    session.add_all([
+        CryoCustodyEvent(location_id=loc_e02.id, embryo_id=e02.id, event_type="vitrified",
+                          performed_by_id=staff["embryologist"].id,
+                          occurred_at=datetime(2026, 8, 4, 11, 42, tzinfo=timezone.utc),
+                          notes="Vitrification completed — E-02 loaded to Straw 03"),
+        CryoCustodyEvent(location_id=loc_e03.id, embryo_id=e03.id, event_type="vitrified",
+                          performed_by_id=staff["embryologist"].id,
+                          occurred_at=datetime(2026, 8, 5, 10, 20, tzinfo=timezone.utc),
+                          notes="E-03 vitrified and stored in Straw 04"),
+    ])
+
     print(f"Seeded demo couple: Priya Raman ({priya.uhid}) & Arjun Kumar ({arjun.uhid}), cycle {cycle.cycle_number}")
+    print(f"Seeded {len(embryos)} embryos (2 cryopreserved) for cycle {cycle.cycle_number}")
 
 
 async def main() -> None:

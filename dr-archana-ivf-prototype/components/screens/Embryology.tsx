@@ -1,11 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '@/lib/store';
 import { EMBRYOS, EMBRYO_SUMMARY, PATIENT, type Embryo } from '@/lib/data';
 import { cn, TONE } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Modal, Field, InfoNote, ProgressBar } from '@/components/ui/primitives';
 import { useCountUp } from '@/lib/hooks';
+import { useCoupleForPatient } from '@/lib/api/patients';
+import { useActiveCycle } from '@/lib/api/ivf';
+import { useEmbryosForCycle, type EmbryoOut } from '@/lib/api/embryology';
+import { useCryoLocationsForCycle } from '@/lib/api/cryostorage';
 import {
   Microscope,
   Snowflake,
@@ -108,9 +112,53 @@ function FunnelStat({
   );
 }
 
+const STATUS_META: Record<string, { label: string; tone: Embryo['tone'] }> = {
+  under_clinical_review: { label: 'Under Clinical Review', tone: 'attention' },
+  selected_for_transfer: { label: 'Selected for Transfer', tone: 'active' },
+  cryopreserved: { label: 'Cryopreserved', tone: 'completed' },
+  not_suitable_for_transfer: { label: 'Not Suitable for Transfer', tone: 'cancelled' },
+  transferred: { label: 'Transferred', tone: 'completed' },
+  discarded: { label: 'Discarded', tone: 'cancelled' },
+};
+
+function toEmbryoViewModel(e: EmbryoOut, storageAddress: string | null, frozenAt: string | null): Embryo {
+  const meta = STATUS_META[e.status] ?? { label: e.status, tone: 'neutral' as const };
+  return {
+    id: e.label,
+    day: e.day,
+    grade: e.grade,
+    expansion: e.expansion ?? '—',
+    icm: e.icm_grade ?? '—',
+    trophectoderm: e.trophectoderm_grade ?? '—',
+    status: meta.label,
+    tone: meta.tone,
+    note: e.embryologist_notes ?? '',
+    score: e.quality_score ?? 0,
+    storage: storageAddress ?? undefined,
+    frozen: frozenAt ? new Date(frozenAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined,
+  };
+}
+
 export function Embryology() {
-  const { go, toast } = useApp();
+  const { go, toast, selectedPatientId } = useApp();
   const [detail, setDetail] = useState<Embryo | null>(null);
+
+  const coupleQuery = useCoupleForPatient(selectedPatientId);
+  const cycleQuery = useActiveCycle(coupleQuery.data?.id ?? null);
+  const embryosQuery = useEmbryosForCycle(cycleQuery.data?.id ?? null);
+  const locationsQuery = useCryoLocationsForCycle(cycleQuery.data?.id ?? null);
+
+  const realEmbryos = embryosQuery.data ?? [];
+  const hasRealData = realEmbryos.length > 0;
+  const embryos = useMemo(() => {
+    if (!hasRealData) return EMBRYOS;
+    const locByEmbryoId = new Map((locationsQuery.data ?? []).map((l) => [l.embryo_id, l]));
+    return realEmbryos.map((e) => {
+      const loc = locByEmbryoId.get(e.id);
+      const address = loc ? `${loc.tank} / ${loc.canister} / ${loc.cane} / ${loc.goblet} / ${loc.straw}` : null;
+      return toEmbryoViewModel(e, address, loc?.frozen_at ?? null);
+    });
+  }, [hasRealData, realEmbryos, locationsQuery.data]);
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
@@ -118,7 +166,11 @@ export function Embryology() {
         <SectionTitle
           eyebrow="Laboratory"
           title="Embryology Workspace"
-          description={`Cycle ${PATIENT.cycleId} · ${PATIENT.name} · ICSI · Embryologist Dr. Meera Kapoor`}
+          description={
+            cycleQuery.data
+              ? `Cycle ${cycleQuery.data.cycle_number} · ICSI · Embryologist Dr. Meera Kapoor`
+              : `Cycle ${PATIENT.cycleId} · ${PATIENT.name} · ICSI · Embryologist Dr. Meera Kapoor`
+          }
         />
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button icon={<Snowflake className="h-4 w-4" />} onClick={() => go('cryostorage')}>
@@ -157,7 +209,7 @@ export function Embryology() {
           <h3 className="text-[15px] font-semibold tracking-[-0.011em] text-ink-900">
             Blastocyst Cohort
             <span className="ml-2 text-[13px] font-normal text-ink-500">
-              {EMBRYOS.length} embryos graded
+              {embryos.length} embryos graded
             </span>
           </h3>
           <div className="flex items-center gap-3 text-[11.5px] text-ink-400">
@@ -166,7 +218,7 @@ export function Embryology() {
         </div>
 
         <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {EMBRYOS.map((e, i) => (
+          {embryos.map((e, i) => (
             <Card
               key={e.id}
               style={{ ['--i' as string]: i }}
@@ -248,7 +300,7 @@ export function Embryology() {
         open={!!detail}
         onClose={() => setDetail(null)}
         title={detail ? `Embryo ${detail.id} — Grade ${detail.grade}` : ''}
-        subtitle={detail ? `Day ${detail.day} · ${PATIENT.name} · Cycle ${PATIENT.cycleId}` : ''}
+        subtitle={detail ? `Day ${detail.day} · Cycle ${cycleQuery.data?.cycle_number ?? PATIENT.cycleId}` : ''}
         width="max-w-2xl"
         footer={
           detail && (

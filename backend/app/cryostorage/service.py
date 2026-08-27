@@ -87,6 +87,16 @@ async def move_embryo(
     return new_location
 
 
+async def list_locations_for_cycle(session: AsyncSession, cycle_id: uuid.UUID) -> list[CryoLocation]:
+    """Powers the Cryostorage tank view and the per-embryo storage address
+    shown on the Embryology screen — both need "where is this cycle's
+    embryo cohort actually stored" without a separate lookup per embryo."""
+    result = await session.execute(
+        select(CryoLocation).join(Embryo, CryoLocation.embryo_id == Embryo.id).where(Embryo.cycle_id == cycle_id)
+    )
+    return list(result.scalars().all())
+
+
 async def get_custody_history(session: AsyncSession, embryo_id: uuid.UUID) -> list[CryoCustodyEvent]:
     result = await session.execute(
         select(CryoCustodyEvent).where(CryoCustodyEvent.embryo_id == embryo_id).order_by(CryoCustodyEvent.occurred_at)

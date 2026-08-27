@@ -35,6 +35,15 @@ async def move_embryo(
     return await service.move_embryo(session, body, actor_id=current.id, actor_role=current.role.code)
 
 
+@router.get("/locations/by-cycle/{cycle_id}", response_model=list[CryoLocationOut])
+async def list_locations_for_cycle(
+    cycle_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("cryostorage.read")),
+) -> list[CryoLocationOut]:
+    return await service.list_locations_for_cycle(session, cycle_id)
+
+
 @router.get("/custody/{embryo_id}", response_model=list[CustodyEventOut])
 async def get_custody_history(
     embryo_id: str,
