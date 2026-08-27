@@ -16,6 +16,8 @@ from app.ivf.schemas import (
     MonitoringVisitCreate,
     MonitoringVisitOut,
     PregnancyOut,
+    TreatmentPlanOut,
+    TreatmentPlanUpsert,
 )
 from app.users.models import User
 
@@ -57,6 +59,16 @@ async def advance_stage(
     current: User = Depends(require_permission("ivf.write")),
 ) -> CycleOut:
     return await service.advance_stage(session, cycle_id, body.stage, actor_id=current.id, actor_role=current.role.code)
+
+
+@router.put("/cycles/{cycle_id}/treatment-plan", response_model=TreatmentPlanOut)
+async def save_treatment_plan(
+    cycle_id: str,
+    body: TreatmentPlanUpsert,
+    session: AsyncSession = Depends(get_db),
+    current: User = Depends(require_permission("ivf.write")),
+) -> TreatmentPlanOut:
+    return await service.upsert_treatment_plan(session, cycle_id, body, actor_id=current.id, actor_role=current.role.code)
 
 
 @router.post("/monitoring", response_model=MonitoringVisitOut, status_code=201)

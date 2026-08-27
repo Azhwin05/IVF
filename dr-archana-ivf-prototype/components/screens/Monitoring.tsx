@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { MONITORING_HISTORY, MEDICATIONS, HORMONE_REFERENCE, PATIENT } from '@/lib/data';
 import { cn, TONE } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, InfoNote, ProgressBar } from '@/components/ui/primitives';
 import { FollicleMap, GrowthChart } from '@/components/ui/charts';
 import { PatientHeader } from './Workspace';
+import { useCoupleForPatient } from '@/lib/api/patients';
+import { useActiveCycle, useReviewMonitoringVisit, type MonitoringVisitOut } from '@/lib/api/ivf';
 import {
   Activity,
   Pill,
@@ -19,18 +21,71 @@ import {
   Check,
 } from 'lucide-react';
 
+/** Adapts a real MonitoringVisitOut to the shape the existing UI below
+ * (FollicleMap, GrowthChart, hormone panel) was built around, so none of
+ * that presentation code needed to change. */
+function toVisitViewModel(v: MonitoringVisitOut) {
+  return {
+    day: v.cycle_day,
+    date: new Date(v.visit_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
+    right: v.right_follicles_mm,
+    left: v.left_follicles_mm,
+    endometrium: v.endometrium_mm,
+    estradiol: v.estradiol_pg_ml ?? 0,
+    lh: v.lh_miu_ml ?? 0,
+    progesterone: v.progesterone_ng_ml ?? 0,
+    note: v.doctor_note ?? '',
+    reviewed: !!v.reviewed_by_id,
+    id: v.id,
+  };
+}
+
 export function Monitoring() {
-  const { toast } = useApp();
-  const [dayIdx, setDayIdx] = useState(MONITORING_HISTORY.length - 1);
-  const [note, setNote] = useState(MONITORING_HISTORY[MONITORING_HISTORY.length - 1].note);
+  const { toast, selectedPatientId } = useApp();
+  const coupleQuery = useCoupleForPatient(selectedPatientId);
+  const cycleQuery = useActiveCycle(coupleQuery.data?.id ?? null);
+  const reviewVisit = useReviewMonitoringVisit();
+
+  const realVisits = cycleQuery.data?.monitoring_visits ?? [];
+  const hasRealData = realVisits.length > 0;
+  const history = hasRealData
+    ? [...realVisits].sort((a, b) => a.cycle_day - b.cycle_day).map(toVisitViewModel)
+    : MONITORING_HISTORY;
+
+  const [dayIdx, setDayIdx] = useState(history.length - 1);
+  const [note, setNote] = useState(history[history.length - 1]?.note ?? '');
   const [saved, setSaved] = useState(false);
 
-  const visit = MONITORING_HISTORY[dayIdx];
+  // Once real visits load in, snap the selection to the latest one instead
+  // of staying pinned at whatever index the static fixture defaulted to.
+  useEffect(() => {
+    if (hasRealData) {
+      setDayIdx(history.length - 1);
+      setNote(history[history.length - 1]?.note ?? '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasRealData, realVisits.length]);
+
+  const visit = history[dayIdx] ?? history[history.length - 1];
   const allFollicles = [...visit.right, ...visit.left];
   const mature = allFollicles.filter((f) => f >= 16).length;
-  const lead = Math.max(...allFollicles);
+  const lead = allFollicles.length ? Math.max(...allFollicles) : 0;
 
   const save = () => {
+    if (hasRealData && 'id' in visit) {
+      reviewVisit.mutate(
+        { visitId: (visit as ReturnType<typeof toVisitViewModel>).id, doctorNote: note },
+        {
+          onSuccess: () => {
+            setSaved(true);
+            toast({ title: 'Clinical review saved', body: 'Signed off and recorded in the audit trail.', tone: 'success' });
+            setTimeout(() => setSaved(false), 2600);
+          },
+          onError: () => toast({ title: 'Could not save review', body: 'Please try again.', tone: 'error' }),
+        }
+      );
+      return;
+    }
     setSaved(true);
     toast({
       title: 'Clinical review saved',
@@ -44,15 +99,23 @@ export function Monitoring() {
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
       <PatientHeader compact />
 
+      {!hasRealData && !cycleQuery.isLoading && (
+        <InfoNote tone="neutral" icon={<Activity className="h-4 w-4" />}>
+          {coupleQuery.data
+            ? 'No monitoring visits recorded yet for this cycle — showing the demo reference data below.'
+            : 'This patient has no linked couple/cycle record yet — showing demo reference data below.'}
+        </InfoNote>
+      )}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <SectionTitle
-          eyebrow={`Cycle ${PATIENT.cycleId}`}
+          eyebrow={cycleQuery.data ? `Cycle ${cycleQuery.data.cycle_number}` : `Cycle ${PATIENT.cycleId}`}
           title={`Ovarian Stimulation — Day ${visit.day}`}
-          description={`Monitoring recorded ${visit.date} · ${PATIENT.protocol}`}
+          description={`Monitoring recorded ${visit.date} · ${cycleQuery.data?.protocol ?? PATIENT.protocol}`}
         />
         {/* Day switcher */}
         <div className="flex shrink-0 gap-1 rounded-lg bg-ink-100 p-1">
-          {MONITORING_HISTORY.map((m, i) => (
+          {history.map((m, i) => (
             <button
               key={m.day}
               onClick={() => {
@@ -162,12 +225,12 @@ export function Monitoring() {
             />
             <div className="px-5 pb-5">
               <GrowthChart
-                xLabels={MONITORING_HISTORY.map((m) => `Day ${m.day}`)}
+                xLabels={history.map((m) => `Day ${m.day}`)}
                 yUnit="millimetres"
                 series={[
-                  { name: 'Lead follicle', color: '#059669', values: MONITORING_HISTORY.map((m) => Math.max(...m.right, ...m.left)) },
-                  { name: 'Mean follicle', color: '#34D399', values: MONITORING_HISTORY.map((m) => { const a = [...m.right, ...m.left]; return +(a.reduce((s, v) => s + v, 0) / a.length).toFixed(1); }) },
-                  { name: 'Endometrium', color: '#8B5CF6', values: MONITORING_HISTORY.map((m) => m.endometrium) },
+                  { name: 'Lead follicle', color: '#059669', values: history.map((m) => (m.right.length || m.left.length ? Math.max(...m.right, ...m.left) : 0)) },
+                  { name: 'Mean follicle', color: '#34D399', values: history.map((m) => { const a = [...m.right, ...m.left]; return a.length ? +(a.reduce((s, v) => s + v, 0) / a.length).toFixed(1) : 0; }) },
+                  { name: 'Endometrium', color: '#8B5CF6', values: history.map((m) => m.endometrium) },
                 ]}
               />
             </div>

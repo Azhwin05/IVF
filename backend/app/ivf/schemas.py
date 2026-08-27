@@ -14,6 +14,23 @@ class CycleCreate(BaseModel):
     started_at: date
 
 
+class TreatmentPlanUpsert(BaseModel):
+    objective: str | None = None
+    medication_plan: list[dict] | None = None  # [{name, dose, route, status}]
+    consent_status: dict | None = None
+    notes: str | None = None
+
+
+class TreatmentPlanOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    cycle_id: uuid.UUID
+    objective: str | None
+    medication_plan: list[dict] | None
+    consent_status: dict | None
+    notes: str | None
+
+
 class CycleOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
@@ -23,6 +40,12 @@ class CycleOut(BaseModel):
     treatment: str
     stage: CycleStage
     started_at: date
+    # Both relationships are already eagerly loaded (lazy="selectin" on
+    # IVFCycle, see app/ivf/models.py) so embedding them here is free —
+    # the frontend's Monitoring/Plan screens need the full history in one
+    # request rather than N+1 round trips per visit.
+    monitoring_visits: list["MonitoringVisitOut"] = []
+    treatment_plans: list["TreatmentPlanOut"] = []
 
 
 class CycleStageUpdate(BaseModel):
@@ -103,3 +126,9 @@ class PregnancyOut(BaseModel):
     estimated_due_date: date | None
     beta_hcg_results: list[BetaHcgOut]
     milestones: list[MilestoneOut]
+
+
+# CycleOut references MonitoringVisitOut/TreatmentPlanOut by forward
+# reference (both are defined further down this file) — resolve them now
+# that every class in the module has been declared.
+CycleOut.model_rebuild()

@@ -6,6 +6,9 @@ import { PATIENT, PARTNER, MEDICATIONS, PACKAGE, INVESTIGATIONS } from '@/lib/da
 import { cn, formatINR } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Field, DataRow, InfoNote, ProgressBar } from '@/components/ui/primitives';
 import { PatientHeader } from './Workspace';
+import { useCoupleForPatient } from '@/lib/api/patients';
+import { useActiveCycle, useSaveTreatmentPlan, type CycleStage } from '@/lib/api/ivf';
+import { ApiError } from '@/lib/api/client';
 import {
   ClipboardList,
   Pill,
@@ -19,32 +22,84 @@ import {
   Stethoscope,
 } from 'lucide-react';
 
-const STAGES = [
-  { id: 'consult', label: 'Consultation', status: 'done' },
-  { id: 'stim', label: 'Stimulation', status: 'active' },
-  { id: 'retrieval', label: 'Retrieval', status: 'todo' },
-  { id: 'embryology', label: 'Embryology', status: 'todo' },
-  { id: 'transfer', label: 'Transfer', status: 'todo' },
-  { id: 'followup', label: 'Follow-up', status: 'todo' },
-];
+const UI_STAGES = [
+  { id: 'consult', label: 'Consultation' },
+  { id: 'stim', label: 'Stimulation' },
+  { id: 'retrieval', label: 'Retrieval' },
+  { id: 'embryology', label: 'Embryology' },
+  { id: 'transfer', label: 'Transfer' },
+  { id: 'followup', label: 'Follow-up' },
+] as const;
+
+/** Backend has 8 granular stages; this screen's tracker shows 6. Multiple
+ * backend stages collapse onto one UI step (stimulation+trigger -> "stim",
+ * pregnancy_followup+completed -> "followup") rather than the tracker
+ * needing its own redesign. */
+const STAGE_TO_UI_INDEX: Record<CycleStage, number> = {
+  assessment: 0,
+  stimulation: 1,
+  trigger: 1,
+  retrieval: 2,
+  embryology: 3,
+  transfer: 4,
+  pregnancy_followup: 5,
+  completed: 5,
+};
+
+function buildStages(currentStage: CycleStage | null) {
+  const activeIdx = currentStage ? STAGE_TO_UI_INDEX[currentStage] : 1;
+  return UI_STAGES.map((s, i) => ({
+    ...s,
+    status: i < activeIdx ? 'done' : i === activeIdx ? 'active' : 'todo',
+  }));
+}
 
 export function Plan() {
-  const { go, toast } = useApp();
+  const { go, toast, selectedPatientId } = useApp();
+  const coupleQuery = useCoupleForPatient(selectedPatientId);
+  const cycleQuery = useActiveCycle(coupleQuery.data?.id ?? null);
+  const savePlan = useSaveTreatmentPlan();
+
+  const cycle = cycleQuery.data ?? null;
+  const plan = cycle?.treatment_plans?.[0] ?? null;
+  const stages = buildStages(cycle?.stage ?? null);
+  const activeIdx = stages.findIndex((s) => s.status === 'active');
+  const progressPct = ((activeIdx >= 0 ? activeIdx : 1) / (UI_STAGES.length - 1)) * 100;
+
+  // Real medication_plan rows are {name, dose, route, status} — no
+  // `since`/`tone`, which only the static demo fixture carries.
+  type MedicationRow = { name: string; dose: string; route: string; status: string; since?: string; tone?: import('@/lib/data').StatusTone };
+  const medications: MedicationRow[] = plan?.medication_plan?.length ? plan.medication_plan : MEDICATIONS;
+
+  const confirmPlan = () => {
+    if (!cycle) {
+      toast({ title: 'Treatment plan confirmed', body: 'Plan re-confirmed and recorded in the audit trail.', tone: 'success' });
+      return;
+    }
+    savePlan.mutate(
+      {
+        cycleId: cycle.id,
+        objective: plan?.objective ?? 'Achieve a single healthy ongoing pregnancy',
+        medication_plan: plan?.medication_plan ?? null,
+        notes: plan?.notes ?? null,
+      },
+      {
+        onSuccess: () => toast({ title: 'Treatment plan confirmed', body: 'Plan re-confirmed and recorded in the audit trail.', tone: 'success' }),
+        onError: (err) => toast({ title: 'Could not save plan', body: err instanceof ApiError ? err.message : 'Please try again.', tone: 'error' }),
+      }
+    );
+  };
 
   return (
     <div className="screen-enter mx-auto max-w-[1300px] space-y-5 p-4 sm:p-6 lg:p-8">
       <PatientHeader compact />
 
       <SectionTitle
-        eyebrow={`Cycle ${PATIENT.cycleId}`}
+        eyebrow={cycle ? `Cycle ${cycle.cycle_number}` : `Cycle ${PATIENT.cycleId}`}
         title="IVF Treatment Plan"
         description="Protocol, objectives, medication schedule and expected stages"
         action={
-          <Button
-            variant="primary"
-            icon={<Check className="h-4 w-4" />}
-            onClick={() => toast({ title: 'Treatment plan confirmed', body: 'Plan re-confirmed and recorded in the audit trail.', tone: 'success' })}
-          >
+          <Button variant="primary" icon={<Check className="h-4 w-4" />} loading={savePlan.isPending} onClick={confirmPlan}>
             Confirm Plan
           </Button>
         }
@@ -56,10 +111,10 @@ export function Plan() {
           <div className="absolute left-0 right-0 top-[15px] h-[2px] bg-ink-200" />
           <div
             className="absolute left-0 top-[15px] h-[2px] bg-gradient-to-r from-brand-500 to-brand-600 transition-[width] duration-[1500ms] ease-spring"
-            style={{ width: '30%' }}
+            style={{ width: `${progressPct}%` }}
           />
           <div className="relative flex justify-between">
-            {STAGES.map((s, i) => (
+            {stages.map((s, i) => (
               <div key={s.id} className="animate-fade-up flex min-w-0 flex-1 flex-col items-center px-0.5" style={{ animationDelay: `${i * 80}ms` }}>
                 <div
                   className={cn(
@@ -101,8 +156,8 @@ export function Plan() {
               action={<Badge tone="active">Active</Badge>}
             />
             <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
-              <Field label="Treatment" value={PATIENT.treatment} />
-              <Field label="Protocol" value={PATIENT.protocol} />
+              <Field label="Treatment" value={cycle?.treatment ?? PATIENT.treatment} />
+              <Field label="Protocol" value={cycle?.protocol ?? PATIENT.protocol} />
               <Field label="Indication" value={`${PATIENT.infertilityType} — ${PATIENT.duration}`} />
               <Field label="Fertilisation Method" value="ICSI (partner factor)" />
               <Field label="Transfer Strategy" value="Elective single blastocyst transfer" />
@@ -121,27 +176,31 @@ export function Plan() {
           <Card>
             <CardHeader icon={<Pill className="h-4 w-4" />} title="Medication Plan" subtitle="Stimulation and adjunct therapy" />
             <div className="stagger space-y-2 px-5 pb-5">
-              {MEDICATIONS.map((m, i) => (
-                <div
-                  key={m.name}
-                  style={{ ['--i' as string]: i }}
-                  className="flex flex-wrap items-center gap-3 rounded-xl border border-ink-200/70 p-3.5"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
-                    <Pill className="h-4 w-4" />
+              {medications.map((m, i) => {
+                const since = m.since ?? null;
+                const tone = m.tone ?? 'active';
+                return (
+                  <div
+                    key={m.name}
+                    style={{ ['--i' as string]: i }}
+                    className="flex flex-wrap items-center gap-3 rounded-xl border border-ink-200/70 p-3.5"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+                      <Pill className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13.5px] font-semibold text-ink-900">
+                        {m.name} <span className="tnum font-normal text-ink-500">· {m.dose}</span>
+                      </p>
+                      <p className="text-[12px] text-ink-500">{m.route}</p>
+                    </div>
+                    {since && <span className="text-[11.5px] text-ink-400">From {since}</span>}
+                    <Badge tone={tone} size="sm">
+                      {m.status}
+                    </Badge>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-semibold text-ink-900">
-                      {m.name} <span className="tnum font-normal text-ink-500">· {m.dose}</span>
-                    </p>
-                    <p className="text-[12px] text-ink-500">{m.route}</p>
-                  </div>
-                  <span className="text-[11.5px] text-ink-400">From {m.since}</span>
-                  <Badge tone={m.tone} size="sm">
-                    {m.status}
-                  </Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
 

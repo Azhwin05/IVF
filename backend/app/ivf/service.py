@@ -15,8 +15,9 @@ from app.ivf.models import (
     MonitoringVisit,
     PregnancyMilestone,
     PregnancyRecord,
+    TreatmentPlan,
 )
-from app.ivf.schemas import BetaHcgCreate, CycleCreate, MilestoneCreate, MonitoringVisitCreate
+from app.ivf.schemas import BetaHcgCreate, CycleCreate, MilestoneCreate, MonitoringVisitCreate, TreatmentPlanUpsert
 from app.patients.models import Couple
 
 
@@ -132,6 +133,35 @@ async def review_monitoring_visit(
         after_state={"doctor_note": doctor_note},
     )
     return visit
+
+
+async def upsert_treatment_plan(
+    session: AsyncSession, cycle_id: uuid.UUID, data: TreatmentPlanUpsert, *, actor_id: uuid.UUID, actor_role: str
+) -> TreatmentPlan:
+    """One editable plan per cycle — the Treatment Plan screen is a single
+    form the doctor updates over time, not a history of past plans, so
+    this updates the existing row in place rather than creating a new one
+    on every save."""
+    await get_cycle(session, cycle_id)  # 404s if the cycle doesn't exist
+    result = await session.execute(select(TreatmentPlan).where(TreatmentPlan.cycle_id == cycle_id))
+    plan = result.scalar_one_or_none()
+
+    before = None
+    if plan is None:
+        plan = TreatmentPlan(cycle_id=cycle_id, **data.model_dump())
+        session.add(plan)
+    else:
+        before = {"objective": plan.objective, "medication_plan": plan.medication_plan, "notes": plan.notes}
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(plan, field, value)
+    await session.flush()
+
+    await record_audit_event(
+        session, actor_id=actor_id, actor_role=actor_role,
+        action="ivf.treatment_plan_saved", entity_type="TreatmentPlan", entity_id=str(plan.id),
+        before_state=before, after_state=data.model_dump(exclude_unset=True, mode="json"),
+    )
+    return plan
 
 
 async def get_or_create_pregnancy(session: AsyncSession, cycle_id: uuid.UUID) -> PregnancyRecord:
