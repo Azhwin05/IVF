@@ -84,8 +84,19 @@ export interface CoupleOut {
 
 // ---- appointments -------------------------------------------------------
 
-export type AppointmentStatus = 'scheduled' | 'arrived' | 'waiting' | 'in_consultation' | 'completed' | 'cancelled' | 'no_show';
-export type AppointmentChannel = 'walk_in' | 'phone' | 'online' | 'referral';
+export type AppointmentStatus =
+  | 'registered'
+  | 'arrived'
+  | 'waiting'
+  | 'consultation'
+  | 'investigation'
+  | 'billing'
+  | 'pharmacy'
+  | 'follow_up'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show';
+export type AppointmentChannel = 'walk_in' | 'phone' | 'online';
 
 export interface AppointmentOut {
   id: string;

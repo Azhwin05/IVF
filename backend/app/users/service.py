@@ -27,6 +27,19 @@ async def list_users(session: AsyncSession) -> list[User]:
     return list(result.scalars().all())
 
 
+async def list_users_by_role_code(session: AsyncSession, role_code: str) -> list[User]:
+    """Used for lightweight staff-picker UIs (e.g. the doctor list on the
+    appointment book) that need names, not the full user-management view
+    GET /users is gated behind — those callers only have appointments.read,
+    not admin.manage_users."""
+    from app.roles.models import Role
+
+    result = await session.execute(
+        select(User).join(Role).where(Role.code == role_code, User.is_active.is_(True)).order_by(User.full_name)
+    )
+    return list(result.scalars().all())
+
+
 async def create_user(
     session: AsyncSession, data: UserCreate, *, actor_id: uuid.UUID, actor_role: str
 ) -> User:

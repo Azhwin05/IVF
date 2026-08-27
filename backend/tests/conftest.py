@@ -22,16 +22,47 @@ test to trip over.
 """
 import asyncio
 import os
+import re
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-os.environ.setdefault(
-    "DATABASE_URL",
-    os.environ.get("TEST_DATABASE_URL", "postgresql+asyncpg://archana:archana_dev@localhost:5432/archana_hmis_test"),
-)
+def _resolve_test_database_url() -> str:
+    """Deliberately never a plain `os.environ.setdefault("DATABASE_URL", ...)`.
+    That used to be a real incident: running `pytest` inside the API
+    container (which already has a real DATABASE_URL from .env) left the
+    ambient value untouched, so `_create_schema_once` below ran
+    `drop_all`/`create_all` against the *actual* seeded database and wiped
+    every demo account and patient record it had. DATABASE_URL for the
+    test run is now always computed fresh and always overwritten:
+      1. TEST_DATABASE_URL, if the caller set one explicitly.
+      2. Otherwise, DATABASE_URL with its database name suffixed `_test`
+         — same host/credentials (so it works inside Docker, where
+         `localhost` doesn't resolve to the postgres service), but a
+         database name that can never collide with the real one.
+      3. A hardcoded localhost fallback, for running pytest outside Docker
+         with no environment configured at all.
+    """
+    explicit = os.environ.get("TEST_DATABASE_URL")
+    if explicit:
+        return explicit
+
+    ambient = os.environ.get("DATABASE_URL")
+    if ambient:
+        return re.sub(r"(/)([^/?]+)(\?.*)?$", lambda m: f"{m.group(1)}{m.group(2)}_test{m.group(3) or ''}", ambient)
+
+    return "postgresql+asyncpg://archana:archana_dev@localhost:5432/archana_hmis_test"
+
+
+_TEST_DATABASE_URL = _resolve_test_database_url()
+if not _TEST_DATABASE_URL.rsplit("/", 1)[-1].split("?")[0].endswith("_test"):
+    raise RuntimeError(
+        f"Refusing to run tests against a database whose name doesn't end in '_test': {_TEST_DATABASE_URL!r}. "
+        "This guard exists because this suite's schema-setup fixture drops and recreates every table."
+    )
+os.environ["DATABASE_URL"] = _TEST_DATABASE_URL
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-not-for-production-use-only-in-ci")
 
 from app.core import all_models  # noqa: E402  (must import after env vars are set)
@@ -51,6 +82,23 @@ def _create_schema_once():
     functions later."""
     async def _create():
         url = os.environ["DATABASE_URL"]
+        db_name = url.rsplit("/", 1)[-1].split("?")[0]
+        assert db_name.endswith("_test"), f"Safety check failed: {db_name!r} doesn't look like a test database."
+
+        # Create the test database itself if it doesn't exist yet — lets
+        # `docker compose exec api pytest` work with zero manual setup,
+        # connecting via the admin `postgres` database to issue CREATE DATABASE.
+        admin_url = url.rsplit("/", 1)[0] + "/postgres"
+        admin_engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
+        try:
+            async with admin_engine.connect() as conn:
+                from sqlalchemy import text
+                exists = await conn.scalar(text("SELECT 1 FROM pg_database WHERE datname = :name"), {"name": db_name})
+                if not exists:
+                    await conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+        finally:
+            await admin_engine.dispose()
+
         eng = create_async_engine(url)
         async with eng.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)

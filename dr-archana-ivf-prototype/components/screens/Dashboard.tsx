@@ -76,10 +76,14 @@ function MetricTile({
 }
 
 const APPOINTMENT_STATUS_TONE: Record<string, keyof typeof TONE> = {
-  scheduled: 'scheduled',
+  registered: 'scheduled',
   arrived: 'active',
   waiting: 'attention',
-  in_consultation: 'active',
+  consultation: 'active',
+  investigation: 'active',
+  billing: 'pending',
+  pharmacy: 'pending',
+  follow_up: 'scheduled',
   completed: 'completed',
   cancelled: 'cancelled',
   no_show: 'critical',

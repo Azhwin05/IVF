@@ -25,6 +25,25 @@ async def list_users(
     ]
 
 
+@router.get("/doctors", response_model=list[UserSummary])
+async def list_doctors(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("appointments.read")),
+) -> list[UserSummary]:
+    """Lightweight staff-picker for the appointment book and other
+    scheduling UIs — deliberately gated behind appointments.read rather
+    than admin.manage_users, since front-desk/clinical roles need this
+    list but should never see the full user-management endpoint."""
+    users = await service.list_users_by_role_code(session, "doctor")
+    return [
+        UserSummary(
+            id=u.id, employee_code=u.employee_code, full_name=u.full_name, email=u.email,
+            department=u.department, is_active=u.is_active, role_code=u.role.code,
+        )
+        for u in users
+    ]
+
+
 @router.post("", response_model=UserSummary, status_code=201)
 async def create_user(
     body: UserCreate,
