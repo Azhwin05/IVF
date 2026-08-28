@@ -171,7 +171,7 @@ export function Transfer() {
           <div className="bg-gradient-to-br from-brand-600 to-brand-800 p-5 text-white">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-brand-200" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-brand-200">
+              <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-brand-200">
                 Selected Embryo
               </span>
             </div>
@@ -179,10 +179,10 @@ export function Transfer() {
               {embryo.id}
             </p>
             <div className="mt-3 flex items-center gap-3">
-              <span className="tnum rounded-lg bg-white/15 px-2.5 py-1 text-[13px] font-bold ring-1 ring-inset ring-white/20">
+              <span className="tnum rounded-lg bg-white/15 px-2.5 py-1 text-[14px] font-bold ring-1 ring-inset ring-white/20">
                 Grade {embryo.grade}
               </span>
-              <span className="text-[13px] text-brand-100">Day {embryo.day} blastocyst</span>
+              <span className="text-[14px] text-brand-100">Day {embryo.day} blastocyst</span>
             </div>
           </div>
 
@@ -272,7 +272,7 @@ export function Transfer() {
                     <>
                       <div className="mb-4 flex items-center gap-3 rounded-xl bg-ink-50 p-3">
                         <div className="flex-1">
-                          <div className="mb-1.5 flex justify-between text-[11.5px]">
+                          <div className="mb-1.5 flex justify-between text-[12.5px]">
                             <span className="font-medium text-ink-600">Verification progress</span>
                             <span className="tnum font-semibold text-ink-900">
                               {doneCount} of {items.length}
@@ -323,10 +323,10 @@ export function Transfer() {
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className={cn('text-[13.5px] font-medium', c.on ? 'text-brand-900' : 'text-ink-800')}>
+                              <p className={cn('text-[14.5px] font-medium', c.on ? 'text-brand-900' : 'text-ink-800')}>
                                 {c.label}
                               </p>
-                              {c.detail && <p className="mt-0.5 text-[12px] leading-relaxed text-ink-500">{c.detail}</p>}
+                              {c.detail && <p className="mt-0.5 text-[13px] leading-relaxed text-ink-500">{c.detail}</p>}
                             </div>
                             {c.on && <Check className="mt-1 h-4 w-4 shrink-0 text-brand-600" />}
                           </button>
@@ -352,8 +352,8 @@ export function Transfer() {
                     <Check className="h-5 w-5 text-white" strokeWidth={3} />
                   </div>
                   <div>
-                    <p className="text-[13.5px] font-semibold text-ink-900">Transfer completed</p>
-                    <p className="text-[12px] text-ink-500">
+                    <p className="text-[14.5px] font-semibold text-ink-900">Transfer completed</p>
+                    <p className="text-[13px] text-ink-500">
                       {hasRealData && realTransfer
                         ? `Recorded for ${new Date(realTransfer.transfer_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`
                         : 'Recorded 7 August 2026, 11:42 AM'}

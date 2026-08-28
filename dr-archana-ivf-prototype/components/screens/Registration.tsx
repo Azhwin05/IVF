@@ -117,23 +117,23 @@ export function Registration() {
           <div className="flex items-center justify-center gap-5">
             <div className="text-center">
               <Avatar initials={initialsOf(form.name)} size="lg" gradient="from-brand-500 to-teal-600" className="mx-auto" />
-              <p className="mt-2 text-[13.5px] font-semibold text-ink-900">{form.name}</p>
-              <p className="tnum text-[11.5px] text-ink-500">{createdCouple?.female_patient.uhid}</p>
+              <p className="mt-2 text-[14.5px] font-semibold text-ink-900">{form.name}</p>
+              <p className="tnum text-[12.5px] text-ink-500">{createdCouple?.female_patient.uhid}</p>
             </div>
 
             <div className="flex flex-col items-center">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-50 ring-1 ring-brand-200">
                 <Link2 className="h-4 w-4 text-brand-600" />
               </div>
-              <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-brand-700">
+              <p className="mt-1 text-[11.5px] font-medium uppercase tracking-wider text-brand-700">
                 Linked
               </p>
             </div>
 
             <div className="text-center">
               <Avatar initials={initialsOf(form.pName)} size="lg" gradient="from-sky-500 to-blue-600" className="mx-auto" />
-              <p className="mt-2 text-[13.5px] font-semibold text-ink-900">{form.pName}</p>
-              <p className="tnum text-[11.5px] text-ink-500">{createdCouple?.male_patient.uhid}</p>
+              <p className="mt-2 text-[14.5px] font-semibold text-ink-900">{form.pName}</p>
+              <p className="tnum text-[12.5px] text-ink-500">{createdCouple?.male_patient.uhid}</p>
             </div>
           </div>
         </Card>
@@ -193,7 +193,7 @@ export function Registration() {
                   </div>
                   <p
                     className={cn(
-                      'mt-2 hidden text-center text-[12px] font-medium sm:block',
+                      'mt-2 hidden text-center text-[13px] font-medium sm:block',
                       active ? 'text-brand-800' : done ? 'text-ink-700' : 'text-ink-400'
                     )}
                   >
@@ -298,14 +298,14 @@ export function Registration() {
               </Select>
               <div className="sm:col-span-2">
                 <label className="block">
-                  <span className="mb-1.5 block text-[12.5px] font-medium text-ink-700">
+                  <span className="mb-1.5 block text-[13.5px] font-medium text-ink-700">
                     Previous Treatment History
                   </span>
                   <textarea
                     rows={4}
                     value={form.history}
                     onChange={(e) => set('history', e.target.value)}
-                    className="w-full resize-none rounded-lg border border-ink-200 bg-white p-3 text-[13.5px] text-ink-900"
+                    className="w-full resize-none rounded-lg border border-ink-200 bg-white p-3 text-[14.5px] text-ink-900"
                   />
                 </label>
               </div>
@@ -338,8 +338,8 @@ export function Registration() {
                     {d.done && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-medium text-ink-900">{d.l}</p>
-                    <p className="text-[11.5px] text-ink-500">{d.s}</p>
+                    <p className="text-[14px] font-medium text-ink-900">{d.l}</p>
+                    <p className="text-[12.5px] text-ink-500">{d.s}</p>
                   </div>
                   <Badge tone={d.done ? 'completed' : 'pending'} size="sm">
                     {d.done ? 'Received' : 'Pending'}
@@ -356,8 +356,8 @@ export function Registration() {
                   <div className="mb-3 flex items-center gap-2.5">
                     <Avatar initials={initialsOf(form.name)} size="md" gradient="from-brand-500 to-teal-600" />
                     <div>
-                      <p className="text-[13.5px] font-semibold text-ink-900">{form.name || 'Patient'}</p>
-                      <p className="text-[11.5px] text-brand-700">UHID assigned on creation</p>
+                      <p className="text-[14.5px] font-semibold text-ink-900">{form.name || 'Patient'}</p>
+                      <p className="text-[12.5px] text-brand-700">UHID assigned on creation</p>
                     </div>
                   </div>
                   <Field label="Date of Birth" value={form.dob ? new Date(form.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'} />
@@ -369,8 +369,8 @@ export function Registration() {
                   <div className="mb-3 flex items-center gap-2.5">
                     <Avatar initials={initialsOf(form.pName)} size="md" gradient="from-sky-500 to-blue-600" />
                     <div>
-                      <p className="text-[13.5px] font-semibold text-ink-900">{form.pName || 'Partner'}</p>
-                      <p className="text-[11.5px] text-sky-700">UHID assigned on creation</p>
+                      <p className="text-[14.5px] font-semibold text-ink-900">{form.pName || 'Partner'}</p>
+                      <p className="text-[12.5px] text-sky-700">UHID assigned on creation</p>
                     </div>
                   </div>
                   <Field label="Date of Birth" value={form.pDob ? new Date(form.pDob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'} />
@@ -380,7 +380,7 @@ export function Registration() {
               </div>
 
               <Card className="p-4">
-                <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-500">
+                <p className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-500">
                   Fertility Summary
                 </p>
                 <div className="grid gap-4 sm:grid-cols-4">
@@ -402,7 +402,7 @@ export function Registration() {
         {step === 4 && error && (
           <div className="mx-5 mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-            <p className="text-[12.5px] leading-relaxed text-rose-700">{error}</p>
+            <p className="text-[13.5px] leading-relaxed text-rose-700">{error}</p>
           </div>
         )}
 
@@ -416,7 +416,7 @@ export function Registration() {
             Back
           </Button>
 
-          <span className="tnum text-[12px] text-ink-400">
+          <span className="tnum text-[13px] text-ink-400">
             Step {step + 1} of {STEPS.length}
           </span>
 

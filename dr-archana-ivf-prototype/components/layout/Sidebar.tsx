@@ -81,9 +81,10 @@ export function Sidebar({
           )}
           <button
             onClick={onCloseMobile}
-            className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-800 lg:hidden"
+            aria-label="Close menu"
+            className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-800 lg:hidden"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -91,12 +92,13 @@ export function Sidebar({
       <div className="px-3 pt-3">
         <button
           onClick={() => setPaletteOpen(true)}
+          aria-label="Search"
           className={cn(
-            'press flex w-full items-center gap-2 rounded-lg border border-ink-200 bg-white px-2.5 py-2 text-[13px] text-ink-400 transition-colors hover:border-ink-300 hover:text-ink-600',
+            'press flex min-h-[44px] w-full items-center gap-2 rounded-lg border border-ink-200 bg-white px-2.5 py-2 text-[14px] text-ink-500 transition-colors hover:border-ink-300 hover:text-ink-700',
             collapsed && 'justify-center px-0'
           )}
         >
-          <Command className="h-3.5 w-3.5 shrink-0" />
+          <Command className="h-4 w-4 shrink-0" />
           {!collapsed && (
             <>
               <span className="flex-1 text-left">Search…</span>
@@ -130,7 +132,7 @@ export function Sidebar({
           return (
             <div key={section} className="mb-4 last:mb-0">
               {!collapsed && (
-                <p className="mb-1.5 px-2.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-ink-400">
+                <p className="mb-1.5 px-2.5 text-[11.5px] font-semibold uppercase tracking-[0.13em] text-ink-500">
                   {section}
                 </p>
               )}
@@ -145,15 +147,16 @@ export function Sidebar({
                       data-nav={item.id}
                       onClick={() => navigate(item.id)}
                       title={collapsed ? item.label : undefined}
+                      aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors duration-200',
+                        'relative flex min-h-[44px] w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-[14.5px] font-medium transition-colors duration-200',
                         active ? 'text-brand-800' : 'text-ink-600 hover:text-ink-900',
                         collapsed && 'justify-center px-0'
                       )}
                     >
                       <Icon
                         className={cn(
-                          'h-[17px] w-[17px] shrink-0 transition-colors',
+                          'h-[19px] w-[19px] shrink-0 transition-colors',
                           active ? 'text-brand-600' : 'text-ink-400'
                         )}
                         strokeWidth={active ? 2.2 : 1.9}
@@ -192,8 +195,9 @@ export function Sidebar({
         <div className={cn('flex gap-1', collapsed && 'flex-col')}>
           <button
             onClick={onToggle}
-            title="Collapse"
-            className="hidden flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[12px] font-medium text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800 lg:flex"
+            title={collapsed ? 'Expand menu' : 'Collapse menu'}
+            aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
+            className="hidden min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[13px] font-medium text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800 lg:flex"
           >
             <ChevronsLeft className={cn('h-4 w-4 transition-transform duration-300', collapsed && 'rotate-180')} />
             {!collapsed && 'Collapse'}
@@ -201,17 +205,19 @@ export function Sidebar({
           {!collapsed && (
             <button
               title="Help"
-              className="flex items-center justify-center rounded-lg px-2.5 py-2 text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800"
+              aria-label="Help"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2.5 py-2 text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800"
             >
-              <LifeBuoy className="h-4 w-4" />
+              <LifeBuoy className="h-[18px] w-[18px]" />
             </button>
           )}
           <button
             onClick={logout}
             title="Sign out"
-            className="flex items-center justify-center rounded-lg px-2.5 py-2 text-ink-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
+            aria-label="Sign out"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2.5 py-2 text-ink-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-[18px] w-[18px]" />
           </button>
         </div>
       </div>

@@ -17,7 +17,7 @@ function Metric({ label, value, icon: Icon, tone }: { label: string; value: numb
         <Icon className="h-[18px] w-[18px]" />
       </div>
       <p className="tnum tracking-display mt-3 text-[24px] font-semibold leading-none text-ink-900">{Math.round(v)}</p>
-      <p className="mt-1.5 text-[12px] font-medium text-ink-600">{label}</p>
+      <p className="mt-1.5 text-[13px] font-medium text-ink-600">{label}</p>
     </Card>
   );
 }
@@ -150,14 +150,14 @@ export function Staff() {
                   <div className="flex items-start gap-3">
                     <Avatar initials={s.name.split(' ').map((w) => w[0]).slice(0, 2).join('')} size="md" gradient="from-ink-400 to-ink-600" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-ink-900">{s.name}</p>
-                      <p className="truncate text-[11.5px] text-ink-500">{s.role}</p>
+                      <p className="truncate text-[14px] font-semibold text-ink-900">{s.name}</p>
+                      <p className="truncate text-[12.5px] text-ink-500">{s.role}</p>
                     </div>
                     <Badge tone={s.tone} size="sm">
                       {s.status}
                     </Badge>
                   </div>
-                  <div className="mt-3 space-y-1.5 border-t border-ink-100 pt-3 text-[11.5px]">
+                  <div className="mt-3 space-y-1.5 border-t border-ink-100 pt-3 text-[12.5px]">
                     <div className="flex justify-between">
                       <span className="text-ink-400">Department</span>
                       <span className="text-ink-700">{s.department}</span>
@@ -186,8 +186,8 @@ export function Staff() {
             {leaveRequests.map((l, i) => (
               <div key={i} style={{ ['--i' as string]: i }} className="flex flex-wrap items-center gap-4 border-b border-ink-100 py-3.5 last:border-0">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-ink-900">{l.staff}</p>
-                  <p className="text-[12px] text-ink-500">
+                  <p className="text-[14px] font-semibold text-ink-900">{l.staff}</p>
+                  <p className="text-[13px] text-ink-500">
                     {l.type} · {l.from} {l.from !== l.to && `– ${l.to}`}
                     <span className="tnum"> · {l.days} day{l.days > 1 ? 's' : ''}</span>
                   </p>
@@ -208,9 +208,10 @@ export function Staff() {
                           toast({ title: 'Leave approved', body: `${l.staff}'s ${l.type.toLowerCase()} approved.`, tone: 'success' });
                         }
                       }}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-700 transition-colors hover:bg-brand-100"
+                      aria-label={`Approve ${l.staff}'s leave request`}
+                      className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-brand-50 px-3.5 text-[14px] font-medium text-brand-700 transition-colors hover:bg-brand-100"
                     >
-                      <Check className="h-3.5 w-3.5" />
+                      <Check className="h-4 w-4" /> Approve
                     </button>
                     <button
                       onClick={() => {
@@ -223,9 +224,10 @@ export function Staff() {
                           toast({ title: 'Leave declined', body: `${l.staff}'s request has been declined.`, tone: 'warning' });
                         }
                       }}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100"
+                      aria-label={`Decline ${l.staff}'s leave request`}
+                      className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-rose-50 px-3.5 text-[14px] font-medium text-rose-600 transition-colors hover:bg-rose-100"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" /> Decline
                     </button>
                   </div>
                 )}

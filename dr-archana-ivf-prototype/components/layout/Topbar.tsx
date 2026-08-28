@@ -22,10 +22,27 @@ import {
   Menu,
 } from 'lucide-react';
 
-export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
+import type { TextScale } from './AppShell';
+
+const TEXT_SCALE_OPTIONS: { id: TextScale; label: string; sample: string }[] = [
+  { id: 'standard', label: 'Standard', sample: 'Aa' },
+  { id: 'large', label: 'Large', sample: 'Aa' },
+  { id: 'xl', label: 'Extra large', sample: 'Aa' },
+];
+
+export function Topbar({
+  onOpenMobileNav,
+  textScale,
+  onTextScaleChange,
+}: {
+  onOpenMobileNav: () => void;
+  textScale: TextScale;
+  onTextScaleChange: (s: TextScale) => void;
+}) {
   const { user, screen, go, back, history, setPaletteOpen, notifOpen, setNotifOpen, toast } = useApp();
   const [quickOpen, setQuickOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [scaleOpen, setScaleOpen] = useState(false);
   const clock = useClock();
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +54,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         setQuickOpen(false);
         setUserOpen(false);
         setNotifOpen(false);
+        setScaleOpen(false);
       }
     };
     document.addEventListener('mousedown', onDoc);
@@ -58,10 +76,11 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
       {/* Mobile nav trigger */}
       <button
         onClick={onOpenMobileNav}
-        className="press flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800 lg:hidden"
+        className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800 lg:hidden"
         title="Open menu"
+        aria-label="Open menu"
       >
-        <Menu className="h-[18px] w-[18px]" />
+        <Menu className="h-5 w-5" />
       </button>
 
       {/* Context */}
@@ -69,17 +88,18 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         {history.length > 0 && (
           <button
             onClick={back}
-            className="press hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-800 sm:flex"
+            className="press hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-800 sm:flex"
             title="Back"
+            aria-label="Go back"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
         )}
         <div className="min-w-0">
-          <h1 className="truncate text-[13.5px] font-semibold tracking-[-0.012em] text-ink-900 sm:text-[15px]">
+          <h1 className="truncate text-[15px] font-semibold tracking-[-0.012em] text-ink-900 sm:text-[16px]">
             {SCREEN_TITLES[screen]}
           </h1>
-          <p className="hidden truncate text-[11.5px] text-ink-400 sm:block">
+          <p className="hidden truncate text-[12.5px] text-ink-500 sm:block">
             Dr. Archana IVF &amp; Women Centre · Anna Nagar, Chennai
           </p>
         </div>
@@ -88,9 +108,9 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
       {/* Search — desktop */}
       <button
         onClick={() => setPaletteOpen(true)}
-        className="group ml-auto hidden h-9 w-[300px] items-center gap-2.5 rounded-lg border border-ink-200 bg-ink-50/70 px-3 text-[13px] text-ink-400 transition-all hover:border-ink-300 hover:bg-white lg:flex"
+        className="group ml-auto hidden h-10 w-[300px] items-center gap-2.5 rounded-lg border border-ink-200 bg-ink-50/70 px-3 text-[14px] text-ink-500 transition-all hover:border-ink-300 hover:bg-white lg:flex"
       >
-        <Search className="h-3.5 w-3.5" />
+        <Search className="h-4 w-4" />
         <span className="flex-1 text-left">Search patients, cycles, embryos…</span>
         <kbd className="rounded border border-ink-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-ink-400">
           ⌘K
@@ -100,10 +120,11 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
       {/* Search — mobile / tablet icon trigger */}
       <button
         onClick={() => setPaletteOpen(true)}
-        className="press ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800 lg:hidden"
+        className="press ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800 lg:hidden"
         title="Search"
+        aria-label="Search"
       >
-        <Search className="h-[18px] w-[18px]" />
+        <Search className="h-5 w-5" />
       </button>
 
       {/* Date + secure session */}
@@ -125,7 +146,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
 
       {/* Quick action */}
       <div className="relative">
-        <Button variant="primary" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setQuickOpen((v) => !v)}>
+        <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setQuickOpen((v) => !v)}>
           <span className="hidden sm:inline">Quick Action</span>
           <ChevronDown className={cn('hidden h-3.5 w-3.5 transition-transform sm:block', quickOpen && 'rotate-180')} />
         </Button>
@@ -151,13 +172,58 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         )}
       </div>
 
+      {/* Text size */}
+      <div className="relative">
+        <button
+          onClick={() => setScaleOpen((v) => !v)}
+          aria-label="Text size"
+          title="Text size"
+          className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800"
+        >
+          <span className="text-[15px] font-semibold leading-none">
+            A<span className="text-[11px]">a</span>
+          </span>
+        </button>
+        {scaleOpen && (
+          <div className="modal-in absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-ink-200/70 bg-white p-1.5 shadow-float">
+            <p className="px-2.5 pb-1 pt-1.5 text-[12px] font-semibold uppercase tracking-wide text-ink-500">
+              Text size
+            </p>
+            {TEXT_SCALE_OPTIONS.map((o, i) => (
+              <button
+                key={o.id}
+                onClick={() => {
+                  onTextScaleChange(o.id);
+                  setScaleOpen(false);
+                }}
+                className={cn(
+                  'flex min-h-[44px] w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[14px] font-medium transition-colors',
+                  textScale === o.id ? 'bg-brand-50 text-brand-800' : 'text-ink-700 hover:bg-ink-100'
+                )}
+              >
+                <span
+                  className="w-8 text-center font-semibold text-ink-500"
+                  style={{ fontSize: 13 + i * 3 }}
+                >
+                  {o.sample}
+                </span>
+                <span className="flex-1">{o.label}</span>
+                {textScale === o.id && <Check className="h-4 w-4 text-brand-600" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Notifications */}
       <div className="relative">
         <button
           onClick={() => setNotifOpen(!notifOpen)}
-          className="press relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800"
+          aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
+          title="Notifications"
+          className="press relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800"
         >
-          <Bell className="h-[18px] w-[18px]" />
+          <Bell className="h-5 w-5" />
           {unread > 0 && (
             <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-white">
               {unread}

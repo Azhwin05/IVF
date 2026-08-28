@@ -65,8 +65,8 @@ function MetricTile({
       <p className="tnum tracking-display mt-3.5 text-[28px] font-semibold leading-none text-ink-900">
         {display}
       </p>
-      <p className="mt-1.5 text-[12.5px] font-medium text-ink-600">{metric.label}</p>
-      <p className="mt-0.5 text-[11px] text-ink-400">{metric.delta}</p>
+      <p className="mt-1.5 text-[13.5px] font-medium text-ink-600">{metric.label}</p>
+      <p className="mt-0.5 text-[12px] text-ink-400">{metric.delta}</p>
 
       <div className="mt-3 -mx-1">
         <Sparkline data={metric.trend} height={28} />
@@ -147,14 +147,14 @@ export function Dashboard() {
         <div className="min-w-0">
           <div className="mb-1.5 flex items-center gap-2">
             <span className="h-px w-6 bg-brand-500" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-700">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-brand-700">
               {TODAY}
             </span>
           </div>
           <h1 className="tracking-display font-display text-[26px] leading-tight text-ink-900 sm:text-[34px]">
             {greeting}, {displayName.split(' ')[0]} {displayName.split(' ')[1]?.replace('S.', '')}
           </h1>
-          <p className="mt-1 text-[13px] text-ink-500 sm:text-[14px]">
+          <p className="mt-1 text-[14px] text-ink-500 sm:text-[14px]">
             Here is your clinical and operational overview for today.
           </p>
         </div>
@@ -207,7 +207,7 @@ export function Dashboard() {
           />
           <div className="stagger px-2 pb-2">
             {todaysAppointments.length === 0 && !appointmentsQuery.isLoading && (
-              <p className="px-3 py-6 text-center text-[12.5px] text-ink-400">No appointments scheduled for today.</p>
+              <p className="px-3 py-6 text-center text-[13.5px] text-ink-400">No appointments scheduled for today.</p>
             )}
             {todaysAppointments.map((a, i) => {
               const patientName = patientNameById[a.patient_id] ?? 'Unknown patient';
@@ -225,7 +225,7 @@ export function Dashboard() {
                     <p className="tnum text-[14px] font-semibold text-ink-900">
                       {time.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: false })}
                     </p>
-                    <p className="text-[10px] uppercase tracking-wide text-ink-400">
+                    <p className="text-[11.5px] uppercase tracking-wide text-ink-400">
                       {time.getHours() < 12 ? 'AM' : 'PM'}
                     </p>
                   </div>
@@ -235,8 +235,8 @@ export function Dashboard() {
                   <Avatar initials={initials} size="sm" gradient="from-ink-400 to-ink-600" />
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13.5px] font-medium text-ink-900">{patientName}</p>
-                    <p className="truncate text-[12px] text-ink-500">
+                    <p className="truncate text-[14.5px] font-medium text-ink-900">{patientName}</p>
+                    <p className="truncate text-[13px] text-ink-500">
                       {a.visit_type} · <span className="text-ink-400">{a.channel.replace('_', ' ')}</span>
                     </p>
                   </div>
@@ -277,18 +277,18 @@ export function Dashboard() {
                 <div className="flex items-start gap-2.5">
                   <span
                     className={cn(
-                      'tnum mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold text-white',
+                      'tnum mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold text-white',
                       TONE[al.tone].solid
                     )}
                   >
                     {al.count}
                   </span>
                   <div className="min-w-0">
-                    <p className={cn('text-[13px] font-semibold leading-snug', TONE[al.tone].text)}>
+                    <p className={cn('text-[14px] font-semibold leading-snug', TONE[al.tone].text)}>
                       {al.title}
                     </p>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-ink-600">{al.detail}</p>
-                    <span className={cn('mt-2 inline-flex items-center gap-1 text-[11.5px] font-medium', TONE[al.tone].text)}>
+                    <p className="mt-1 text-[12.5px] leading-relaxed text-ink-600">{al.detail}</p>
+                    <span className={cn('mt-2 inline-flex items-center gap-1 text-[12.5px] font-medium', TONE[al.tone].text)}>
                       {al.action}
                       <ChevronRight className="h-3 w-3" />
                     </span>
@@ -349,10 +349,10 @@ export function Dashboard() {
                     <Icon className="h-3.5 w-3.5 text-ink-500" />
                   </div>
                   <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-[12.5px] leading-snug text-ink-700">
+                    <p className="text-[13.5px] leading-snug text-ink-700">
                       <span className="font-semibold text-ink-900">{a.actor}</span> {a.action}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-ink-400">{a.time}</p>
+                    <p className="mt-0.5 text-[12px] text-ink-400">{a.time}</p>
                   </div>
                 </div>
               );
@@ -386,8 +386,8 @@ export function Dashboard() {
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-ink-900">{q.label}</p>
-                    <p className="truncate text-[11.5px] text-ink-500">{q.desc}</p>
+                    <p className="truncate text-[14px] font-medium text-ink-900">{q.label}</p>
+                    <p className="truncate text-[12.5px] text-ink-500">{q.desc}</p>
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-600" />
                 </button>

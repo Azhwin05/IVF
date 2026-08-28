@@ -52,7 +52,7 @@ function Metric({ label, value, icon: Icon, tone }: { label: string; value: numb
         <Icon className="h-[18px] w-[18px]" />
       </div>
       <p className="tnum tracking-display mt-3 text-[24px] font-semibold leading-none text-ink-900">{Math.round(v)}</p>
-      <p className="mt-1.5 text-[12px] font-medium text-ink-600">{label}</p>
+      <p className="mt-1.5 text-[13px] font-medium text-ink-600">{label}</p>
     </Card>
   );
 }
@@ -157,7 +157,7 @@ export function Laboratory() {
                     key={f}
                     onClick={() => setFilter(f)}
                     className={cn(
-                      'shrink-0 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all',
+                      'shrink-0 rounded-md px-3 py-1.5 text-[13.5px] font-medium transition-all',
                       filter === f ? 'bg-white text-ink-900 shadow-card' : 'text-ink-500 hover:text-ink-800'
                     )}
                   >
@@ -179,7 +179,7 @@ export function Laboratory() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="tnum text-[12px] font-semibold text-ink-500">{o.id}</span>
+                        <span className="tnum text-[13px] font-semibold text-ink-500">{o.id}</span>
                         {o.priority === 'Urgent' && (
                           <Badge tone="critical" size="sm" dot={false}>
                             <AlertTriangle className="mr-0.5 h-2.5 w-2.5" /> Urgent
@@ -189,8 +189,8 @@ export function Laboratory() {
                           {o.source}
                         </Badge>
                       </div>
-                      <p className="mt-1 text-[13.5px] font-semibold text-ink-900">{o.test}</p>
-                      <p className="text-[12px] text-ink-500">
+                      <p className="mt-1 text-[14.5px] font-semibold text-ink-900">{o.test}</p>
+                      <p className="text-[13px] text-ink-500">
                         {o.patient} {o.patientId && <span className="tnum text-ink-400">· {o.patientId}</span>}
                       </p>
                     </div>
@@ -198,7 +198,7 @@ export function Laboratory() {
                       {o.status}
                     </Badge>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-ink-400">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-400">
                     <span>Ordered by {o.orderedBy}</span>
                     <span className="tnum">{o.orderedOn}</span>
                     <span>{o.sampleType}</span>
@@ -209,7 +209,7 @@ export function Laboratory() {
             </div>
             {rows.length === 0 && (
               <div className="px-5 py-14 text-center">
-                <p className="text-[13.5px] text-ink-500">No lab orders match your filters</p>
+                <p className="text-[14.5px] text-ink-500">No lab orders match your filters</p>
               </div>
             )}
           </Card>
@@ -221,10 +221,10 @@ export function Laboratory() {
             {catalogue.map((t, i) => (
               <div key={t.test} style={{ ['--i' as string]: i }} className="flex items-center justify-between gap-3 border-b border-ink-100 py-2.5 last:border-0">
                 <div className="min-w-0">
-                  <p className="truncate text-[12.5px] font-medium text-ink-800">{t.test}</p>
-                  <p className="text-[11px] text-ink-400">TAT {t.tat}</p>
+                  <p className="truncate text-[13.5px] font-medium text-ink-800">{t.test}</p>
+                  <p className="text-[12px] text-ink-400">TAT {t.tat}</p>
                 </div>
-                <span className="tnum shrink-0 text-[13px] font-semibold text-ink-900">₹{t.price.toLocaleString('en-IN')}</span>
+                <span className="tnum shrink-0 text-[14px] font-semibold text-ink-900">₹{t.price.toLocaleString('en-IN')}</span>
               </div>
             ))}
           </div>

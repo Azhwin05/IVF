@@ -100,7 +100,7 @@ export function Pregnancy() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-brand-600" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-700">
+              <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-brand-700">
                 Treatment Outcome
               </span>
             </div>
@@ -130,7 +130,7 @@ export function Pregnancy() {
                 ]
             ).map((s) => (
               <div key={s.l} className="rounded-xl border border-brand-200/60 bg-white/70 p-3 backdrop-blur-sm">
-                <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-ink-400">
+                <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-ink-400">
                   {s.l}
                 </p>
                 <p className="tnum mt-1 text-[17px] font-semibold text-ink-900">{s.v}</p>
@@ -158,13 +158,13 @@ export function Pregnancy() {
                   className="animate-fade-up rounded-xl border border-ink-200/70 bg-gradient-to-b from-white to-brand-50/40 p-4"
                   style={{ animationDelay: `${i * 110}ms` }}
                 >
-                  <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-400">
+                  <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-ink-400">
                     {b.day}
                   </p>
                   <p className="tnum tracking-display mt-1.5 text-[28px] font-semibold leading-none text-ink-900">
                     {b.value.toLocaleString('en-IN')}
                   </p>
-                  <p className="mt-1 text-[11px] text-ink-400">mIU/mL</p>
+                  <p className="mt-1 text-[12px] text-ink-400">mIU/mL</p>
                   <Badge tone={b.tone} size="sm" className="mt-2.5">
                     {b.verdict}
                   </Badge>
@@ -209,13 +209,13 @@ export function Pregnancy() {
                 style={{ animationDelay: `${i * 100}ms` }}
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-[13px] font-semibold text-ink-900">{u.week}</p>
+                  <p className="text-[14px] font-semibold text-ink-900">{u.week}</p>
                   <Badge tone={u.ok ? 'completed' : 'pending'} size="sm">
                     {u.ok ? 'Completed' : 'Scheduled'}
                   </Badge>
                 </div>
-                <p className="tnum mt-0.5 text-[11px] text-ink-400">{u.date}</p>
-                <p className="mt-1.5 text-[12px] leading-relaxed text-ink-600">{u.finding}</p>
+                <p className="tnum mt-0.5 text-[12px] text-ink-400">{u.date}</p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink-600">{u.finding}</p>
               </div>
             ))}
 
@@ -263,11 +263,11 @@ export function Pregnancy() {
                         <span className="h-2 w-2 rounded-full bg-ink-300" />
                       )}
                     </div>
-                    <p className={cn('mt-2.5 text-[12.5px] font-semibold leading-tight', done ? 'text-ink-900' : 'text-ink-500')}>
+                    <p className={cn('mt-2.5 text-[13.5px] font-semibold leading-tight', done ? 'text-ink-900' : 'text-ink-500')}>
                       {m.label}
                     </p>
-                    <p className="tnum mt-0.5 text-[11px] text-ink-400">{m.date}</p>
-                    <p className="mt-1 text-[11px] leading-snug text-ink-500">{m.detail}</p>
+                    <p className="tnum mt-0.5 text-[12px] text-ink-400">{m.date}</p>
+                    <p className="mt-1 text-[12px] leading-snug text-ink-500">{m.detail}</p>
                   </div>
                 );
               })}

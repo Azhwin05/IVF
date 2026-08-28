@@ -69,7 +69,7 @@ export function Timeline() {
       <Card className="p-4 sm:p-5">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[12.5px] text-ink-500">Journey progress</p>
+            <p className="text-[13.5px] text-ink-500">Journey progress</p>
             <p className="tnum tracking-display text-[20px] font-semibold text-ink-900 sm:text-[22px]">
               {completed} of {stages.length} stages complete
             </p>
@@ -92,7 +92,7 @@ export function Timeline() {
             { c: 'bg-amber-500', l: 'In progress' },
             { c: 'bg-ink-300', l: 'Upcoming' },
           ].map((k) => (
-            <span key={k.l} className="flex items-center gap-1.5 text-[11.5px] text-ink-500">
+            <span key={k.l} className="flex items-center gap-1.5 text-[12.5px] text-ink-500">
               <span className={cn('h-2 w-2 rounded-full', k.c)} /> {k.l}
             </span>
           ))}
@@ -160,8 +160,8 @@ export function Timeline() {
                           {done ? 'Completed' : active ? 'In progress' : 'Upcoming'}
                         </Badge>
                       </div>
-                      <p className="tnum mt-1 text-[12.5px] font-medium text-ink-500">{s.date}</p>
-                      <p className="mt-1.5 text-[13px] leading-relaxed text-ink-600">{s.summary}</p>
+                      <p className="tnum mt-1 text-[13.5px] font-medium text-ink-500">{s.date}</p>
+                      <p className="mt-1.5 text-[14px] leading-relaxed text-ink-600">{s.summary}</p>
                     </div>
                     <ChevronDown
                       className={cn(

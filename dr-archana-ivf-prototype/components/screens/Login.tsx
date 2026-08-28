@@ -122,7 +122,7 @@ export function Login() {
               </div>
               <div>
                 <p className="font-display text-[24px] leading-tight text-white">Dr. Archana</p>
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-brand-300">
+                <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-brand-300">
                   IVF &amp; Women Centre
                 </p>
               </div>
@@ -160,8 +160,8 @@ export function Login() {
                     style={{ animationDelay: `${0.3 + i * 0.09}s` }}
                   >
                     <Icon className="h-4.5 w-4.5 text-brand-300" style={{ height: 18, width: 18 }} />
-                    <p className="mt-2.5 text-[12.5px] font-semibold leading-tight text-white">{f.label}</p>
-                    <p className="mt-1 text-[11px] leading-snug text-brand-100/55">{f.sub}</p>
+                    <p className="mt-2.5 text-[13.5px] font-semibold leading-tight text-white">{f.label}</p>
+                    <p className="mt-1 text-[12px] leading-snug text-brand-100/55">{f.sub}</p>
                   </div>
                 );
               })}
@@ -177,7 +177,7 @@ export function Login() {
             ].map((s) => (
               <div key={s.l}>
                 <p className="tnum font-display text-[22px] leading-none text-white">{s.v}</p>
-                <p className="mt-1.5 text-[11px] text-brand-100/50">{s.l}</p>
+                <p className="mt-1.5 text-[12px] text-brand-100/50">{s.l}</p>
               </div>
             ))}
           </div>
@@ -199,7 +199,7 @@ export function Login() {
             </div>
             <div>
               <p className="font-display text-[18px] leading-tight text-ink-900">Dr. Archana</p>
-              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-brand-700">
+              <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-brand-700">
                 IVF &amp; Women Centre
               </p>
             </div>
@@ -209,20 +209,20 @@ export function Login() {
             <div className="animate-fade-up">
               <div className="mb-1.5 flex items-center gap-2">
                 <span className="h-px w-6 bg-brand-500" />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-700">
+                <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-brand-700">
                   Clinical Access
                 </span>
               </div>
               <h2 className="tracking-display text-[28px] font-semibold text-ink-900">
                 Sign in securely
               </h2>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-500">
+              <p className="mt-1.5 text-[14.5px] leading-relaxed text-ink-500">
                 Secure access to clinical and hospital operations.
               </p>
 
               {/* Role selector */}
               <div className="mt-7">
-                <p className="mb-2.5 text-[12px] font-medium text-ink-700">Select your role</p>
+                <p className="mb-2.5 text-[13px] font-medium text-ink-700">Select your role</p>
                 <div className="grid grid-cols-2 gap-2">
                   {ROLE_CARDS.map((r, i) => {
                     const Icon = r.icon;
@@ -256,13 +256,13 @@ export function Login() {
                         </div>
                         <p
                           className={cn(
-                            'mt-2.5 text-[12.5px] font-semibold leading-tight',
+                            'mt-2.5 text-[13.5px] font-semibold leading-tight',
                             active ? 'text-brand-900' : 'text-ink-800'
                           )}
                         >
                           {r.label}
                         </p>
-                        <p className="mt-0.5 text-[10.5px] leading-snug text-ink-500">{r.desc}</p>
+                        <p className="mt-0.5 text-[12px] leading-snug text-ink-500">{r.desc}</p>
                       </button>
                     );
                   })}
@@ -294,22 +294,22 @@ export function Login() {
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-ink-400">Demo password: {DEMO_PASSWORD}</p>
+                <p className="text-[12px] text-ink-400">Demo password: {DEMO_PASSWORD}</p>
 
                 {error && (
                   <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-                    <p className="text-[12.5px] leading-relaxed text-rose-700">{error}</p>
+                    <p className="text-[13.5px] leading-relaxed text-rose-700">{error}</p>
                   </div>
                 )}
               </div>
 
               <div className="mt-4 flex items-center justify-between">
-                <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-ink-600">
+                <label className="flex cursor-pointer items-center gap-2 text-[13.5px] text-ink-600">
                   <input type="checkbox" defaultChecked className="h-3.5 w-3.5 rounded border-ink-300 text-brand-600" />
                   Trust this device
                 </label>
-                <button className="text-[12.5px] font-medium text-brand-700 hover:text-brand-800">
+                <button className="text-[13.5px] font-medium text-brand-700 hover:text-brand-800">
                   Forgot password?
                 </button>
               </div>
@@ -327,7 +327,7 @@ export function Login() {
 
               <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-ink-200/70 bg-ink-50/70 p-3">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
-                <p className="text-[11.5px] leading-relaxed text-ink-500">
+                <p className="text-[12.5px] leading-relaxed text-ink-500">
                   Protected clinical information. Authorised hospital personnel only. All access is
                   logged to the audit trail and session activity is monitored.
                 </p>
@@ -351,7 +351,7 @@ export function Login() {
                 <h2 className="tracking-display mt-7 text-[22px] font-semibold text-ink-900">
                   Establishing secure session
                 </h2>
-                <p className="mt-1.5 text-[13.5px] text-ink-500">
+                <p className="mt-1.5 text-[14.5px] text-ink-500">
                   Signing in as <span className="font-medium text-ink-800">{user.name}</span>
                 </p>
 
@@ -385,7 +385,7 @@ export function Login() {
                         </div>
                         <span
                           className={cn(
-                            'text-[13px] font-medium',
+                            'text-[14px] font-medium',
                             done ? 'text-brand-800' : current ? 'text-ink-900' : 'text-ink-400'
                           )}
                         >

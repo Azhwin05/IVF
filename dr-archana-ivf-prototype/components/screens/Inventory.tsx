@@ -48,7 +48,7 @@ function Metric({ label, value, icon: Icon, tone, currency }: { label: string; v
       <p className="tnum tracking-display mt-3 text-[22px] font-semibold leading-none text-ink-900">
         {currency ? formatINR(Math.round(v), true) : Math.round(v)}
       </p>
-      <p className="mt-1.5 text-[12px] font-medium text-ink-600">{label}</p>
+      <p className="mt-1.5 text-[13px] font-medium text-ink-600">{label}</p>
     </Card>
   );
 }
@@ -171,7 +171,7 @@ export function Inventory() {
                     key={c}
                     onClick={() => setCat(c)}
                     className={cn(
-                      'shrink-0 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all',
+                      'shrink-0 rounded-md px-3 py-1.5 text-[13.5px] font-medium transition-all',
                       cat === c ? 'bg-white text-ink-900 shadow-card' : 'text-ink-500 hover:text-ink-800'
                     )}
                   >
@@ -188,13 +188,13 @@ export function Inventory() {
                     <Badge tone={it.tone} size="sm">
                       {it.status}
                     </Badge>
-                    <span className="text-[10.5px] font-medium uppercase tracking-wide text-ink-400">{it.category}</span>
+                    <span className="text-[12px] font-medium uppercase tracking-wide text-ink-400">{it.category}</span>
                   </div>
-                  <p className="mt-2.5 text-[13px] font-semibold leading-snug text-ink-900">{it.name}</p>
+                  <p className="mt-2.5 text-[14px] font-semibold leading-snug text-ink-900">{it.name}</p>
                   <p className="tnum mt-1 text-[20px] font-semibold leading-none text-ink-900">
-                    {it.stock} <span className="text-[11px] font-normal text-ink-400">{it.unit}</span>
+                    {it.stock} <span className="text-[12px] font-normal text-ink-400">{it.unit}</span>
                   </p>
-                  <div className="mt-3 space-y-1 border-t border-ink-100 pt-2.5 text-[11px] text-ink-500">
+                  <div className="mt-3 space-y-1 border-t border-ink-100 pt-2.5 text-[12px] text-ink-500">
                     <p className="flex items-center gap-1.5">
                       <MapPin className="h-3 w-3 shrink-0" /> {it.location}
                     </p>
@@ -217,13 +217,13 @@ export function Inventory() {
                   <Truck className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-ink-900">
+                  <p className="text-[14px] font-semibold text-ink-900">
                     {po.item} <span className="tnum font-normal text-ink-400">· {po.id}</span>
                   </p>
-                  <p className="text-[12px] text-ink-500">
+                  <p className="text-[13px] text-ink-500">
                     {po.supplier} · Qty {po.qty}
                   </p>
-                  <p className="tnum text-[11px] text-ink-400">{po.date}</p>
+                  <p className="tnum text-[12px] text-ink-400">{po.date}</p>
                 </div>
                 <span className="tnum text-[14px] font-semibold text-ink-900">{formatINR(po.amount)}</span>
                 <Badge tone={po.tone} size="sm">

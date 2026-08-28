@@ -20,7 +20,7 @@ function Metric({ label, value, icon: Icon, tone, currency }: { label: string; v
       <p className="tnum tracking-display mt-3 text-[22px] font-semibold leading-none text-ink-900">
         {currency ? formatINR(Math.round(v), true) : Math.round(v)}
       </p>
-      <p className="mt-1.5 text-[12px] font-medium text-ink-600">{label}</p>
+      <p className="mt-1.5 text-[13px] font-medium text-ink-600">{label}</p>
     </Card>
   );
 }
@@ -155,11 +155,11 @@ export function Pharmacy() {
                         </Badge>
                       )}
                     </div>
-                    <p className="mt-2.5 text-[13px] font-semibold leading-snug text-ink-900">{m.name}</p>
-                    <p className="text-[11px] text-ink-500">{m.category}</p>
+                    <p className="mt-2.5 text-[14px] font-semibold leading-snug text-ink-900">{m.name}</p>
+                    <p className="text-[12px] text-ink-500">{m.category}</p>
 
                     <div className="mt-3">
-                      <div className="mb-1 flex justify-between text-[11px]">
+                      <div className="mb-1 flex justify-between text-[12px]">
                         <span className="text-ink-500">
                           Stock: <span className="tnum font-semibold text-ink-800">{m.stock}</span> {m.unit}
                         </span>
@@ -169,7 +169,7 @@ export function Pharmacy() {
                     </div>
 
                     {m.mrp !== null ? (
-                      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-ink-100 pt-2.5 text-[11px]">
+                      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-ink-100 pt-2.5 text-[12px]">
                         <span className="text-ink-400">Batch</span>
                         <span className="tnum text-right text-ink-700">{m.batch}</span>
                         <span className="text-ink-400">Expiry</span>
@@ -180,7 +180,7 @@ export function Pharmacy() {
                         <span className="tnum text-right text-ink-700">{m.gst}%</span>
                       </div>
                     ) : (
-                      <p className="mt-3 border-t border-ink-100 pt-2.5 text-[11px] text-ink-400">
+                      <p className="mt-3 border-t border-ink-100 pt-2.5 text-[12px] text-ink-400">
                         Batch-level pricing not available from this endpoint yet.
                       </p>
                     )}
@@ -199,11 +199,11 @@ export function Pharmacy() {
                   <Receipt className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-ink-900">
+                  <p className="text-[14px] font-semibold text-ink-900">
                     {s.patient} <span className="tnum font-normal text-ink-400">· {s.id}</span>
                   </p>
-                  <p className="text-[12px] text-ink-500">{s.items}</p>
-                  <p className="tnum text-[11px] text-ink-400">{s.date}</p>
+                  <p className="text-[13px] text-ink-500">{s.items}</p>
+                  <p className="tnum text-[12px] text-ink-400">{s.date}</p>
                 </div>
                 <span className="tnum text-[14px] font-semibold text-ink-900">{formatINR(s.amount)}</span>
                 <Badge tone={s.tone} size="sm">

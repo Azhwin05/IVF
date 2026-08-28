@@ -140,11 +140,11 @@ export function Cryostorage() {
                   OK
                 </Badge>
               </div>
-              <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-400">
+              <p className="mt-3 text-[12px] font-medium uppercase tracking-[0.06em] text-ink-400">
                 {s.label}
               </p>
               <p className="tnum mt-1 text-[18px] font-semibold text-ink-900">{s.value}</p>
-              <p className="mt-0.5 text-[11px] text-ink-500">{s.sub}</p>
+              <p className="mt-0.5 text-[12px] text-ink-500">{s.sub}</p>
             </Card>
           );
         })}
@@ -173,11 +173,11 @@ export function Cryostorage() {
                     className="animate-fade-up rounded-xl border border-sky-200/70 bg-gradient-to-b from-sky-50/80 to-white px-3.5 py-2.5"
                     style={{ animationDelay: `${i * 90}ms` }}
                   >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-sky-600">
+                    <p className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-sky-600">
                       {l.label}
                     </p>
                     <p className="tnum mt-0.5 text-[14px] font-semibold text-ink-900">{l.value}</p>
-                    <p className="text-[10px] text-ink-400">{l.sub}</p>
+                    <p className="text-[11.5px] text-ink-400">{l.sub}</p>
                   </div>
                   {i < arr.length - 1 && <ChevronRight className="h-4 w-4 shrink-0 text-ink-300" />}
                 </React.Fragment>
@@ -186,7 +186,7 @@ export function Cryostorage() {
 
             {/* straws */}
             <div className="mt-5">
-              <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-500">
+              <p className="mb-2.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-500">
                 Straws in {straw.goblet}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -211,10 +211,10 @@ export function Cryostorage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="tnum text-[14px] font-semibold text-ink-900">{s.id}</p>
-                          <p className="tnum text-[12px] text-ink-600">
+                          <p className="tnum text-[13px] text-ink-600">
                             Embryo {s.embryo} · Grade {s.grade}
                           </p>
-                          <p className="mt-1 text-[11px] text-ink-400">Frozen {s.frozen}</p>
+                          <p className="mt-1 text-[12px] text-ink-400">Frozen {s.frozen}</p>
                           <Badge tone="completed" size="sm" className="mt-1.5">
                             {s.status}
                           </Badge>
@@ -228,7 +228,7 @@ export function Cryostorage() {
 
             {/* selected detail */}
             <div className="mt-5 rounded-xl border border-ink-200/70 bg-ink-50/50 p-4">
-              <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-500">
+              <p className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-500">
                 Selected item detail
               </p>
               <div className="grid gap-4 sm:grid-cols-3">
@@ -249,7 +249,7 @@ export function Cryostorage() {
                 const realNote = hasRealData && straw.embryoId ? embryoById.get(straw.embryoId)?.embryologist_notes : null;
                 const note = realNote ?? embryo?.note;
                 return note ? (
-                  <p className="mt-3 border-l-2 border-sky-300 pl-3 text-[12.5px] leading-relaxed text-ink-600">
+                  <p className="mt-3 border-l-2 border-sky-300 pl-3 text-[13.5px] leading-relaxed text-ink-600">
                     {note}
                   </p>
                 ) : null;
@@ -276,10 +276,10 @@ export function Cryostorage() {
                   }))
                 : CRYO_HIERARCHY.custody.map((c) => ({ event: c.event, at: c.at, by: c.by as string | null }));
               if (hasRealData && custodyQuery.isLoading) {
-                return <p className="text-[12.5px] text-ink-400">Loading custody history…</p>;
+                return <p className="text-[13.5px] text-ink-400">Loading custody history…</p>;
               }
               if (hasRealData && custody.length === 0) {
-                return <p className="text-[12.5px] text-ink-400">No custody events recorded for this straw yet.</p>;
+                return <p className="text-[13.5px] text-ink-400">No custody events recorded for this straw yet.</p>;
               }
               return custody.map((c, i) => (
                 <div key={i} style={{ ['--i' as string]: i }} className="relative flex gap-3 pb-4 last:pb-0">
@@ -288,8 +288,8 @@ export function Cryostorage() {
                     <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[12.5px] leading-snug text-ink-800">{c.event}</p>
-                    <p className="mt-0.5 text-[11px] text-ink-400">
+                    <p className="text-[13.5px] leading-snug text-ink-800">{c.event}</p>
+                    <p className="mt-0.5 text-[12px] text-ink-400">
                       <span className="tnum">{c.at}</span>
                       {c.by && <> · {c.by}</>}
                     </p>

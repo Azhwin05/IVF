@@ -100,8 +100,8 @@ function FunnelStat({
       <p className="tnum tracking-display text-[30px] font-semibold leading-none text-ink-900">
         {Math.round(v)}
       </p>
-      <p className="mt-1.5 text-[12px] font-medium leading-snug text-ink-700">{label}</p>
-      <p className="mt-0.5 text-[10.5px] text-ink-400">{sub}</p>
+      <p className="mt-1.5 text-[13px] font-medium leading-snug text-ink-700">{label}</p>
+      <p className="mt-0.5 text-[12px] text-ink-400">{sub}</p>
       <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-ink-100">
         <div
           className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-[width] duration-[1300ms] ease-spring"
@@ -208,11 +208,11 @@ export function Embryology() {
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-[15px] font-semibold tracking-[-0.011em] text-ink-900">
             Blastocyst Cohort
-            <span className="ml-2 text-[13px] font-normal text-ink-500">
+            <span className="ml-2 text-[14px] font-normal text-ink-500">
               {embryos.length} embryos graded
             </span>
           </h3>
-          <div className="flex items-center gap-3 text-[11.5px] text-ink-400">
+          <div className="flex items-center gap-3 text-[12.5px] text-ink-400">
             <span>Gardner grading system</span>
           </div>
         </div>
@@ -232,7 +232,7 @@ export function Embryology() {
               {e.status === 'Selected for Transfer' && (
                 <div className="flex items-center gap-1.5 bg-gradient-to-r from-brand-600 to-brand-700 px-4 py-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-white" />
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
+                  <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-white">
                     Selected for transfer
                   </span>
                 </div>
@@ -249,15 +249,15 @@ export function Embryology() {
                       <p className="tnum text-[17px] font-semibold tracking-[-0.014em] text-ink-900">
                         {e.id}
                       </p>
-                      <p className="text-[11.5px] text-ink-500">Day {e.day} blastocyst</p>
+                      <p className="text-[12.5px] text-ink-500">Day {e.day} blastocyst</p>
                     </div>
-                    <span className="tnum rounded-lg bg-ink-900 px-2 py-1 text-[12px] font-bold text-white">
+                    <span className="tnum rounded-lg bg-ink-900 px-2 py-1 text-[13px] font-bold text-white">
                       {e.grade}
                     </span>
                   </div>
 
                   <div className="mt-2.5">
-                    <div className="mb-1 flex justify-between text-[10.5px]">
+                    <div className="mb-1 flex justify-between text-[12px]">
                       <span className="text-ink-400">Quality score</span>
                       <span className="tnum font-semibold text-ink-700">{e.score}</span>
                     </div>
@@ -277,9 +277,9 @@ export function Embryology() {
               </div>
 
               <div className="border-t border-ink-100 bg-ink-50/50 px-4 py-2.5">
-                <p className="line-clamp-2 text-[11.5px] leading-relaxed text-ink-500">{e.note}</p>
+                <p className="line-clamp-2 text-[12.5px] leading-relaxed text-ink-500">{e.note}</p>
                 {e.storage && (
-                  <p className="mt-1.5 flex items-center gap-1 text-[10.5px] font-medium text-sky-700">
+                  <p className="mt-1.5 flex items-center gap-1 text-[12px] font-medium text-sky-700">
                     <Snowflake className="h-3 w-3" /> {e.storage}
                   </p>
                 )}
@@ -339,9 +339,9 @@ export function Embryology() {
               <EmbryoVisual embryo={detail} size={124} />
               <div className="min-w-0 flex-1">
                 <Badge tone={detail.tone}>{detail.status}</Badge>
-                <p className="mt-3 text-[13px] leading-relaxed text-ink-600">{detail.note}</p>
+                <p className="mt-3 text-[14px] leading-relaxed text-ink-600">{detail.note}</p>
                 <div className="mt-3">
-                  <div className="mb-1 flex justify-between text-[11px]">
+                  <div className="mb-1 flex justify-between text-[12px]">
                     <span className="text-ink-500">Composite quality score</span>
                     <span className="tnum font-semibold text-ink-800">{detail.score} / 100</span>
                   </div>

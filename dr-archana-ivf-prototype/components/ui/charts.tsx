@@ -186,7 +186,7 @@ export function AreaChart({
 
       {hover !== null && (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-ink-900 px-2.5 py-1.5 text-[11.5px] font-medium text-white shadow-float"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-ink-900 px-2.5 py-1.5 text-[12.5px] font-medium text-white shadow-float"
           style={{ left: `${(pts[hover].x / w) * 100}%`, top: `${(pts[hover].y / height) * 100}%`, marginTop: -10 }}
         >
           <span className="tnum">
@@ -258,7 +258,7 @@ export function DonutChart({
           <span className="tnum tracking-display text-[26px] font-semibold text-ink-900">
             {hover !== null ? data[hover].value : centerValue ?? total}
           </span>
-          <span className="mt-0.5 max-w-[80px] text-center text-[10.5px] font-medium uppercase tracking-[0.06em] text-ink-400">
+          <span className="mt-0.5 max-w-[80px] text-center text-[12px] font-medium uppercase tracking-[0.06em] text-ink-400">
             {hover !== null ? data[hover].label : centerLabel ?? 'Total'}
           </span>
         </div>
@@ -276,8 +276,8 @@ export function DonutChart({
             )}
           >
             <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: d.color }} />
-            <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-600">{d.label}</span>
-            <span className="tnum text-[12.5px] font-semibold text-ink-900">{d.value}</span>
+            <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink-600">{d.label}</span>
+            <span className="tnum text-[13.5px] font-semibold text-ink-900">{d.value}</span>
           </div>
         ))}
       </div>
@@ -316,7 +316,7 @@ export function BarChart({
           >
             <span
               className={cn(
-                'tnum text-[11.5px] font-semibold transition-opacity',
+                'tnum text-[12.5px] font-semibold transition-opacity',
                 hover === i ? 'text-ink-900 opacity-100' : 'text-ink-400 opacity-0 group-hover:opacity-100'
               )}
             >
@@ -336,7 +336,7 @@ export function BarChart({
                 }}
               />
             </div>
-            <span className="text-[11px] font-medium text-ink-500">{d.label}</span>
+            <span className="text-[12px] font-medium text-ink-500">{d.label}</span>
           </div>
         );
       })}
@@ -396,7 +396,7 @@ export function ProgressRing({
           </span>
         </div>
       </div>
-      {label && <span className="text-center text-[11.5px] font-medium text-ink-500">{label}</span>}
+      {label && <span className="text-center text-[12.5px] font-medium text-ink-500">{label}</span>}
     </div>
   );
 }
@@ -431,8 +431,8 @@ export function FollicleMap({
     return (
       <div className="flex-1">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-[12.5px] font-semibold text-ink-700">{label}</span>
-          <span className="tnum rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 ring-1 ring-inset ring-brand-600/15">
+          <span className="text-[13.5px] font-semibold text-ink-700">{label}</span>
+          <span className="tnum rounded-full bg-brand-50 px-2 py-0.5 text-[12px] font-medium text-brand-700 ring-1 ring-inset ring-brand-600/15">
             {mature} mature · {sizes.length} total
           </span>
         </div>
@@ -485,7 +485,7 @@ export function FollicleMap({
                       style={{ boxShadow: `0 0 0 2px ${fill}66` }}
                     />
                   )}
-                  <span className="tnum relative text-[10px] font-bold text-white drop-shadow-sm">
+                  <span className="tnum relative text-[11.5px] font-bold text-white drop-shadow-sm">
                     {mm}
                   </span>
                 </div>
@@ -511,10 +511,10 @@ export function FollicleMap({
         ].map((k) => (
           <div key={k.l} className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: k.c }} />
-            <span className="text-[11.5px] text-ink-500">{k.l}</span>
+            <span className="text-[12.5px] text-ink-500">{k.l}</span>
           </div>
         ))}
-        <span className="ml-auto text-[11.5px] text-ink-400">Bubble size proportional to diameter</span>
+        <span className="ml-auto text-[12.5px] text-ink-400">Bubble size proportional to diameter</span>
       </div>
     </div>
   );
@@ -619,10 +619,10 @@ export function GrowthChart({
         {series.map((s) => (
           <div key={s.name} className="flex items-center gap-1.5">
             <span className="h-2 w-4 rounded-full" style={{ backgroundColor: s.color }} />
-            <span className="text-[11.5px] text-ink-600">{s.name}</span>
+            <span className="text-[12.5px] text-ink-600">{s.name}</span>
           </div>
         ))}
-        {yUnit && <span className="ml-auto text-[11px] text-ink-400">{yUnit}</span>}
+        {yUnit && <span className="ml-auto text-[12px] text-ink-400">{yUnit}</span>}
       </div>
     </div>
   );

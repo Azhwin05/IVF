@@ -94,7 +94,7 @@ export function Patients() {
                   key={f}
                   onClick={() => setFilter(f)}
                   className={cn(
-                    'shrink-0 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all',
+                    'shrink-0 rounded-md px-3 py-1.5 text-[13.5px] font-medium transition-all',
                     filter === f ? 'bg-white text-ink-900 shadow-card' : 'text-ink-500 hover:text-ink-800'
                   )}
                 >
@@ -139,7 +139,7 @@ export function Patients() {
           {/* Table head — desktop only, mobile rows are self-describing */}
           <div className="hidden grid-cols-[minmax(220px,2fr)_1.4fr_1fr_0.8fr_1fr_40px] items-center gap-4 border-b border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
             {['Patient & Partner', 'Treatment Stage', 'Cycle', 'AMH', 'Last Visit', ''].map((h) => (
-              <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+              <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                 {h}
               </span>
             ))}
@@ -156,11 +156,11 @@ export function Patients() {
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar initials={p.initials} size="md" gradient="from-ink-400 to-ink-600" />
                   <div className="min-w-0">
-                    <p className="truncate text-[13.5px] font-semibold text-ink-900">{p.name}</p>
-                    <p className="tnum truncate text-[11.5px] text-ink-500">
+                    <p className="truncate text-[14.5px] font-semibold text-ink-900">{p.name}</p>
+                    <p className="tnum truncate text-[12.5px] text-ink-500">
                       {p.uhid}{p.age !== null ? ` · ${p.age} yrs` : ''}
                     </p>
-                    {p.partner && <p className="truncate text-[11px] text-ink-400">Partner — {p.partner}</p>}
+                    {p.partner && <p className="truncate text-[12px] text-ink-400">Partner — {p.partner}</p>}
                   </div>
                 </div>
 
@@ -168,9 +168,9 @@ export function Patients() {
                   <Badge tone={p.tone} size="sm">
                     {p.stage}
                   </Badge>
-                  <span className="tnum text-[11.5px] font-medium text-ink-700 md:text-[12.5px]">{p.cycleDay}</span>
-                  <span className="tnum text-[11.5px] text-ink-600 md:text-[12.5px]">{p.amh ? `AMH ${p.amh}` : '—'}</span>
-                  <span className="text-[11px] text-ink-500 md:text-[12px]">{p.lastVisit}</span>
+                  <span className="tnum text-[12.5px] font-medium text-ink-700 md:text-[13.5px]">{p.cycleDay}</span>
+                  <span className="tnum text-[12.5px] text-ink-600 md:text-[13.5px]">{p.amh ? `AMH ${p.amh}` : '—'}</span>
+                  <span className="text-[12px] text-ink-500 md:text-[13px]">{p.lastVisit}</span>
                 </div>
 
                 <ChevronRight className="hidden h-4 w-4 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-600 md:block" />
@@ -181,7 +181,7 @@ export function Patients() {
           {rows.length === 0 && (
             <div className="px-5 py-16 text-center">
               <p className="text-[14px] font-medium text-ink-700">No patients match your search</p>
-              <p className="mt-1 text-[13px] text-ink-500">Try a different name, ID or filter.</p>
+              <p className="mt-1 text-[14px] text-ink-500">Try a different name, ID or filter.</p>
             </div>
           )}
         </Card>
@@ -202,19 +202,19 @@ export function Patients() {
                 </Badge>
               </div>
               <p className="mt-3 text-[14px] font-semibold text-ink-900">{p.name}</p>
-              <p className="tnum text-[11.5px] text-ink-500">{p.uhid}</p>
+              <p className="tnum text-[12.5px] text-ink-500">{p.uhid}</p>
               <div className="mt-3 space-y-1.5 border-t border-ink-100 pt-3">
                 <div className="flex justify-between">
-                  <span className="text-[11.5px] text-ink-500">Stage</span>
-                  <span className="text-[11.5px] font-medium text-ink-800">{p.stage}</span>
+                  <span className="text-[12.5px] text-ink-500">Stage</span>
+                  <span className="text-[12.5px] font-medium text-ink-800">{p.stage}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[11.5px] text-ink-500">Partner</span>
-                  <span className="text-[11.5px] font-medium text-ink-800">{p.partner ?? '—'}</span>
+                  <span className="text-[12.5px] text-ink-500">Partner</span>
+                  <span className="text-[12.5px] font-medium text-ink-800">{p.partner ?? '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[11.5px] text-ink-500">AMH</span>
-                  <span className="tnum text-[11.5px] font-medium text-ink-800">{p.amh ? `${p.amh} ng/mL` : '—'}</span>
+                  <span className="text-[12.5px] text-ink-500">AMH</span>
+                  <span className="tnum text-[12.5px] font-medium text-ink-800">{p.amh ? `${p.amh} ng/mL` : '—'}</span>
                 </div>
               </div>
             </Card>

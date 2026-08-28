@@ -76,11 +76,11 @@ export function Audit() {
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink-100 text-ink-600">
                 <Icon className="h-[18px] w-[18px]" />
               </div>
-              <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-400">
+              <p className="mt-3 text-[12px] font-medium uppercase tracking-[0.06em] text-ink-400">
                 {s.l}
               </p>
               <p className="tnum mt-1 text-[20px] font-semibold text-ink-900">{s.v}</p>
-              <p className="mt-0.5 text-[11.5px] text-ink-500">{s.s}</p>
+              <p className="mt-0.5 text-[12.5px] text-ink-500">{s.s}</p>
             </Card>
           );
         })}
@@ -107,7 +107,7 @@ export function Audit() {
           <div className="min-w-[860px]">
             <div className="grid grid-cols-[110px_1.6fr_1.4fr_2fr_140px_110px] gap-4 border-y border-ink-200/70 bg-ink-50/60 px-5 py-2.5">
               {['Event ID', 'User', 'Action', 'Record', 'Timestamp', 'Origin'].map((h) => (
-                <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+                <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                   {h}
                 </span>
               ))}
@@ -120,23 +120,23 @@ export function Audit() {
                   style={{ ['--i' as string]: i }}
                   className="grid grid-cols-[110px_1.6fr_1.4fr_2fr_140px_110px] items-center gap-4 border-b border-ink-100 px-5 py-3 last:border-0 transition-colors hover:bg-ink-50/60"
                 >
-                  <span className="tnum text-[12px] font-semibold text-ink-500">{a.id}</span>
-                  <span className="text-[12.5px] font-medium text-ink-900">{a.user}</span>
+                  <span className="tnum text-[13px] font-semibold text-ink-500">{a.id}</span>
+                  <span className="text-[13.5px] font-medium text-ink-900">{a.user}</span>
                   <div>
                     <Badge tone={a.tone} size="sm">
                       {a.action}
                     </Badge>
                   </div>
-                  <span className="truncate text-[12.5px] text-ink-600">{a.entity}</span>
-                  <span className="tnum text-[11.5px] text-ink-500">{a.time}</span>
-                  <span className="tnum text-[11.5px] text-ink-400">{a.ip}</span>
+                  <span className="truncate text-[13.5px] text-ink-600">{a.entity}</span>
+                  <span className="tnum text-[12.5px] text-ink-500">{a.time}</span>
+                  <span className="tnum text-[12.5px] text-ink-400">{a.ip}</span>
                 </div>
               ))}
             </div>
 
             {rows.length === 0 && (
               <div className="px-5 py-14 text-center">
-                <p className="text-[13.5px] text-ink-500">No audit events match “{q}”</p>
+                <p className="text-[14.5px] text-ink-500">No audit events match “{q}”</p>
               </div>
             )}
           </div>

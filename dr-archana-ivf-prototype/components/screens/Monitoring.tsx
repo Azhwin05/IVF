@@ -123,7 +123,7 @@ export function Monitoring() {
                 setNote(m.note);
               }}
               className={cn(
-                'tnum rounded-md px-3.5 py-1.5 text-[12.5px] font-medium transition-all',
+                'tnum rounded-md px-3.5 py-1.5 text-[13.5px] font-medium transition-all',
                 dayIdx === i ? 'bg-white text-ink-900 shadow-card' : 'text-ink-500 hover:text-ink-800'
               )}
             >
@@ -168,12 +168,12 @@ export function Monitoring() {
                   <span className="mb-1.5 text-[14px] text-ink-400">mm</span>
                 </div>
                 <div className="mt-4">
-                  <div className="mb-1.5 flex justify-between text-[11.5px]">
+                  <div className="mb-1.5 flex justify-between text-[12.5px]">
                     <span className="text-ink-500">Receptivity threshold</span>
                     <span className="tnum font-medium text-ink-700">≥ 7 mm</span>
                   </div>
                   <ProgressBar value={(visit.endometrium / 12) * 100} height={8} />
-                  <div className="mt-1.5 flex justify-between text-[10.5px] text-ink-400">
+                  <div className="mt-1.5 flex justify-between text-[12px] text-ink-400">
                     <span>0</span>
                     <span>12 mm</span>
                   </div>
@@ -193,15 +193,15 @@ export function Monitoring() {
                 {MEDICATIONS.filter((m) => m.status === 'Active').map((m) => (
                   <div key={m.name} className="rounded-xl border border-brand-200/70 bg-brand-50/50 p-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-[13.5px] font-semibold text-ink-900">{m.name}</p>
+                      <p className="text-[14.5px] font-semibold text-ink-900">{m.name}</p>
                       <Badge tone="active" size="sm">
                         {m.status}
                       </Badge>
                     </div>
-                    <p className="tnum mt-1 text-[12.5px] text-ink-600">
+                    <p className="tnum mt-1 text-[13.5px] text-ink-600">
                       {m.dose} · {m.route}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-ink-400">Started {m.since}</p>
+                    <p className="mt-0.5 text-[12px] text-ink-400">Started {m.since}</p>
                   </div>
                 ))}
                 <Button
@@ -250,17 +250,17 @@ export function Monitoring() {
                 <div key={h.label} className="rounded-xl border border-ink-200/70 p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[12.5px] font-medium text-ink-700">{h.label}</p>
+                      <p className="text-[13.5px] font-medium text-ink-700">{h.label}</p>
                       <p className="tnum mt-1 text-[22px] font-semibold leading-none text-ink-900">
                         {h.value.toLocaleString('en-IN')}
-                        <span className="ml-1.5 text-[11px] font-normal text-ink-400">{h.unit}</span>
+                        <span className="ml-1.5 text-[12px] font-normal text-ink-400">{h.unit}</span>
                       </p>
                     </div>
                     <Badge tone={h.ok ? 'completed' : 'attention'} size="sm">
                       {h.ok ? 'In range' : 'Review'}
                     </Badge>
                   </div>
-                  <p className="tnum mt-2 text-[11px] text-ink-400">Expected: {h.range}</p>
+                  <p className="tnum mt-2 text-[12px] text-ink-400">Expected: {h.range}</p>
                 </div>
               ))}
             </div>
@@ -278,14 +278,14 @@ export function Monitoring() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={5}
-                className="w-full resize-none rounded-xl border border-ink-200 bg-white p-3 text-[13px] leading-relaxed text-ink-800 transition-shadow placeholder:text-ink-400"
+                className="w-full resize-none rounded-xl border border-ink-200 bg-white p-3 text-[14px] leading-relaxed text-ink-800 transition-shadow placeholder:text-ink-400"
                 placeholder="Document your clinical assessment…"
               />
 
               <div className="mt-3 rounded-xl bg-ink-50 p-3">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-ink-400">Next review</p>
-                <p className="mt-1 text-[13.5px] font-semibold text-ink-900">30 July 2026 · 9:30 AM</p>
-                <p className="mt-0.5 text-[11.5px] text-ink-500">Scan Room 2 · Dr. Archana</p>
+                <p className="text-[12px] font-medium uppercase tracking-wide text-ink-400">Next review</p>
+                <p className="mt-1 text-[14.5px] font-semibold text-ink-900">30 July 2026 · 9:30 AM</p>
+                <p className="mt-0.5 text-[12.5px] text-ink-500">Scan Room 2 · Dr. Archana</p>
               </div>
 
               <div className="mt-3 flex gap-2">
@@ -303,7 +303,7 @@ export function Monitoring() {
                 />
               </div>
 
-              <p className="mt-3 text-[11px] leading-relaxed text-ink-400">
+              <p className="mt-3 text-[12px] leading-relaxed text-ink-400">
                 The system does not make treatment decisions. All clinical judgements remain the
                 responsibility of the treating physician.
               </p>

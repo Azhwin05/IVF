@@ -98,8 +98,8 @@ export function PatientHeader({ compact }: { compact?: boolean }) {
   if (!selectedPatientId) {
     return (
       <Card className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-[13.5px] font-medium text-ink-700">No patient selected</p>
-        <p className="text-[12.5px] text-ink-500">Open a patient from the registry to view their chart.</p>
+        <p className="text-[14.5px] font-medium text-ink-700">No patient selected</p>
+        <p className="text-[13.5px] text-ink-500">Open a patient from the registry to view their chart.</p>
         <Button size="sm" onClick={() => go('patients')}>Go to Patient Registry</Button>
       </Card>
     );
@@ -151,7 +151,7 @@ export function PatientHeader({ compact }: { compact?: boolean }) {
               </Badge>
             </div>
 
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-500">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-ink-500">
               <span className="tnum font-medium text-ink-700">{summary.uhid}</span>
               {age !== null && <span>{age} years</span>}
               {summary.blood_group && (
@@ -173,14 +173,14 @@ export function PatientHeader({ compact }: { compact?: boolean }) {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <Link2 className="h-3 w-3 text-brand-600" />
-                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-brand-700">
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-brand-700">
                       Linked Treatment Couple
                     </span>
                   </div>
-                  <p className="mt-0.5 text-[13px] font-medium text-ink-900">
+                  <p className="mt-0.5 text-[14px] font-medium text-ink-900">
                     {partner.full_name}
                     {ageFromDOB(partner.date_of_birth) !== null && ` · ${ageFromDOB(partner.date_of_birth)} yrs`}
-                    <span className="tnum ml-2 text-[11.5px] font-normal text-ink-500">{partner.uhid}</span>
+                    <span className="tnum ml-2 text-[12.5px] font-normal text-ink-500">{partner.uhid}</span>
                   </p>
                 </div>
               </div>
@@ -302,7 +302,7 @@ export function Workspace() {
                   <Card className="p-4">
                     <div className="mb-3 flex items-center gap-2">
                       <Heart className="h-4 w-4 text-brand-600" />
-                      <h3 className="text-[13.5px] font-semibold text-ink-900">Fertility Overview</h3>
+                      <h3 className="text-[14.5px] font-semibold text-ink-900">Fertility Overview</h3>
                     </div>
                     <DataRow label="Diagnosis" value={PATIENT.infertilityType} />
                     <DataRow label="Duration" value={PATIENT.duration} />
@@ -316,7 +316,7 @@ export function Workspace() {
                   <Card className="p-4">
                     <div className="mb-3 flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-brand-600" />
-                      <h3 className="text-[13.5px] font-semibold text-ink-900">Medical Information</h3>
+                      <h3 className="text-[14.5px] font-semibold text-ink-900">Medical Information</h3>
                     </div>
                     <DataRow label="Blood Group" value={PATIENT.bloodGroup} />
                     <DataRow label="BMI" value={PATIENT.bmi} />
@@ -345,12 +345,12 @@ export function Workspace() {
                       { l: 'Progesterone', v: `${latest.progesterone}`, u: 'ng/mL' },
                     ].map((m) => (
                       <div key={m.l} className="rounded-xl border border-ink-200/70 bg-ink-50/50 p-3">
-                        <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-ink-400">
+                        <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-ink-400">
                           {m.l}
                         </p>
                         <p className="tnum mt-1.5 text-[19px] font-semibold leading-none text-ink-900">
                           {m.v}
-                          <span className="ml-1 text-[11px] font-normal text-ink-400">{m.u}</span>
+                          <span className="ml-1 text-[12px] font-normal text-ink-400">{m.u}</span>
                         </p>
                       </div>
                     ))}
@@ -393,22 +393,22 @@ export function Workspace() {
               {/* Right rail */}
               <div className="space-y-4">
                 <Card className="p-4">
-                  <h3 className="mb-3 text-[13.5px] font-semibold text-ink-900">Current Cycle</h3>
+                  <h3 className="mb-3 text-[14.5px] font-semibold text-ink-900">Current Cycle</h3>
                   <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 p-4 text-white">
-                    <p className="text-[11px] uppercase tracking-[0.08em] text-brand-200">Cycle ID</p>
+                    <p className="text-[12px] uppercase tracking-[0.08em] text-brand-200">Cycle ID</p>
                     <p className="tnum mt-0.5 text-[15px] font-semibold">{PATIENT.cycleId}</p>
                     <div className="mt-3.5 flex items-end justify-between">
                       <div>
-                        <p className="text-[11px] text-brand-200">Current day</p>
+                        <p className="text-[12px] text-brand-200">Current day</p>
                         <p className="tnum text-[28px] font-semibold leading-none">Day {PATIENT.cycleDay}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[11px] text-brand-200">Phase</p>
-                        <p className="text-[13px] font-medium">{PATIENT.phase}</p>
+                        <p className="text-[12px] text-brand-200">Phase</p>
+                        <p className="text-[14px] font-medium">{PATIENT.phase}</p>
                       </div>
                     </div>
                     <div className="mt-3.5">
-                      <div className="mb-1.5 flex justify-between text-[10.5px] text-brand-200">
+                      <div className="mb-1.5 flex justify-between text-[12px] text-brand-200">
                         <span>Stimulation progress</span>
                         <span className="tnum">Day 8 of ~10</span>
                       </div>
@@ -429,7 +429,7 @@ export function Workspace() {
                 </Card>
 
                 <Card className="p-4">
-                  <h3 className="mb-3 text-[13.5px] font-semibold text-ink-900">Clinical Actions</h3>
+                  <h3 className="mb-3 text-[14.5px] font-semibold text-ink-900">Clinical Actions</h3>
                   <div className="space-y-2">
                     <ActionRow label="Review Monitoring" description="Day 8 scan and hormones" icon={<Activity className="h-4 w-4" />} onClick={() => go('monitoring')} />
                     <ActionRow label="Update Medication" description="Adjust stimulation dosage" icon={<Pill className="h-4 w-4" />} onClick={() => toast({ title: 'Medication updated', body: 'Gonal-F 225 IU continued. Recorded in audit trail.', tone: 'success' })} />
@@ -439,12 +439,12 @@ export function Workspace() {
                 </Card>
 
                 <Card className="p-4">
-                  <h3 className="mb-3 text-[13.5px] font-semibold text-ink-900">Partner Summary</h3>
+                  <h3 className="mb-3 text-[14.5px] font-semibold text-ink-900">Partner Summary</h3>
                   <div className="flex items-center gap-3 rounded-xl bg-ink-50 p-3">
                     <Avatar initials={PARTNER.initials} size="md" gradient="from-sky-500 to-blue-600" />
                     <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-ink-900">{PARTNER.name}</p>
-                      <p className="tnum text-[11.5px] text-ink-500">{PARTNER.id}</p>
+                      <p className="text-[14px] font-semibold text-ink-900">{PARTNER.name}</p>
+                      <p className="tnum text-[12.5px] text-ink-500">{PARTNER.id}</p>
                     </div>
                   </div>
                   <div className="mt-3">
@@ -453,13 +453,13 @@ export function Workspace() {
                     <DataRow label="Occupation" value={PARTNER.occupation} />
                   </div>
                   <div className="mt-3 rounded-xl border border-amber-200/70 bg-amber-50/60 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                    <p className="text-[12px] font-semibold uppercase tracking-wide text-amber-700">
                       Semen Analysis
                     </p>
-                    <p className="mt-1 text-[12px] leading-relaxed text-amber-900">
+                    <p className="mt-1 text-[13px] leading-relaxed text-amber-900">
                       {PARTNER.semenAnalysis.verdict}
                     </p>
-                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11.5px]">
+                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
                       <span className="text-amber-700">Count</span>
                       <span className="tnum font-medium text-amber-900">{PARTNER.semenAnalysis.concentration}</span>
                       <span className="text-amber-700">Motility</span>
@@ -475,7 +475,7 @@ export function Workspace() {
           {tab === 'timeline' && (
             <div className="animate-fade-up">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-[13px] text-ink-500">Condensed journey view</p>
+                <p className="text-[14px] text-ink-500">Condensed journey view</p>
                 <Button size="sm" iconRight={<ChevronRight className="h-3.5 w-3.5" />} onClick={() => go('timeline')}>
                   Open full timeline
                 </Button>
@@ -492,15 +492,15 @@ export function Workspace() {
                   >
                     <span
                       className={cn(
-                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white',
+                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white',
                         s.status === 'completed' ? 'bg-brand-600' : s.status === 'active' ? 'bg-amber-500' : 'bg-ink-300'
                       )}
                     >
                       {i + 1}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-medium text-ink-900">{s.title}</p>
-                      <p className="text-[11.5px] text-ink-500">{s.date}</p>
+                      <p className="text-[14.5px] font-medium text-ink-900">{s.title}</p>
+                      <p className="text-[12.5px] text-ink-500">{s.date}</p>
                     </div>
                     <Badge tone={s.status === 'completed' ? 'completed' : s.status === 'active' ? 'active' : 'pending'} size="sm">
                       {s.status === 'completed' ? 'Completed' : s.status === 'active' ? 'In progress' : 'Upcoming'}
@@ -514,7 +514,7 @@ export function Workspace() {
           {/* ---------------- CONSULTATIONS ---------------- */}
           {tab === 'consultations' && (
             <div className="animate-fade-up stagger space-y-3">
-              {consultations.length === 0 && <p className="px-1 py-8 text-center text-[13px] text-ink-500">No consultations recorded yet.</p>}
+              {consultations.length === 0 && <p className="px-1 py-8 text-center text-[14px] text-ink-500">No consultations recorded yet.</p>}
               {consultations.map((c, i) => (
                 <Card key={i} style={{ ['--i' as string]: i }} className="p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -523,8 +523,8 @@ export function Workspace() {
                         <Stethoscope className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-[13.5px] font-semibold text-ink-900">{c.type}</p>
-                        <p className="text-[11.5px] text-ink-500">
+                        <p className="text-[14.5px] font-semibold text-ink-900">{c.type}</p>
+                        <p className="text-[12.5px] text-ink-500">
                           {c.date} · {c.doctor}
                         </p>
                       </div>
@@ -533,7 +533,7 @@ export function Workspace() {
                       Print
                     </Button>
                   </div>
-                  <p className="mt-3 border-l-2 border-brand-200 pl-3 text-[13px] leading-relaxed text-ink-600">
+                  <p className="mt-3 border-l-2 border-brand-200 pl-3 text-[14px] leading-relaxed text-ink-600">
                     {c.note}
                   </p>
                 </Card>
@@ -548,7 +548,7 @@ export function Workspace() {
                 <Card className="overflow-hidden">
                   <div className="hidden grid-cols-[2fr_1fr_1fr_100px] gap-4 border-b border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
                     {['Investigation', 'Sample Type', 'Date', 'Status'].map((h) => (
-                      <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+                      <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                         {h}
                       </span>
                     ))}
@@ -561,13 +561,13 @@ export function Workspace() {
                         className="flex flex-col gap-1.5 border-b border-ink-100 px-4 py-3 last:border-0 hover:bg-ink-50/60 sm:px-5 md:grid md:grid-cols-[2fr_1fr_1fr_100px] md:items-center md:gap-4"
                       >
                         <div className="flex items-center justify-between gap-3 md:contents">
-                          <span className="text-[13px] font-medium text-ink-800">{iv.name}</span>
+                          <span className="text-[14px] font-medium text-ink-800">{iv.name}</span>
                           <Badge tone={iv.tone} size="sm" className="md:hidden">
                             {iv.status}
                           </Badge>
                         </div>
-                        <span className="text-[12px] text-ink-500">{iv.sampleType}</span>
-                        <span className="text-[12px] text-ink-500">{iv.date}</span>
+                        <span className="text-[13px] text-ink-500">{iv.sampleType}</span>
+                        <span className="text-[13px] text-ink-500">{iv.date}</span>
                         <Badge tone={iv.tone} size="sm" className="hidden md:inline-flex">
                           {iv.status}
                         </Badge>
@@ -579,7 +579,7 @@ export function Workspace() {
                 <Card className="overflow-hidden">
                   <div className="hidden grid-cols-[2fr_1fr_1fr_1fr_100px] gap-4 border-b border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
                     {['Investigation', 'Result', 'Reference', 'Date', 'Status'].map((h) => (
-                      <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+                      <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                         {h}
                       </span>
                     ))}
@@ -592,14 +592,14 @@ export function Workspace() {
                         className="flex flex-col gap-1.5 border-b border-ink-100 px-4 py-3 last:border-0 hover:bg-ink-50/60 sm:px-5 md:grid md:grid-cols-[2fr_1fr_1fr_1fr_100px] md:items-center md:gap-4"
                       >
                         <div className="flex items-center justify-between gap-3 md:contents">
-                          <span className="text-[13px] font-medium text-ink-800">{iv.name}</span>
+                          <span className="text-[14px] font-medium text-ink-800">{iv.name}</span>
                           <Badge tone={iv.flag === 'normal' ? 'completed' : 'attention'} size="sm" className="md:hidden">
                             {iv.flag === 'normal' ? 'Normal' : 'Low'}
                           </Badge>
                         </div>
-                        <span className="tnum text-[13px] font-semibold text-ink-900">{iv.value}</span>
-                        <span className="tnum text-[12px] text-ink-500">Ref {iv.ref}</span>
-                        <span className="text-[12px] text-ink-500">{iv.date}</span>
+                        <span className="tnum text-[14px] font-semibold text-ink-900">{iv.value}</span>
+                        <span className="tnum text-[13px] text-ink-500">Ref {iv.ref}</span>
+                        <span className="text-[13px] text-ink-500">{iv.date}</span>
                         <Badge tone={iv.flag === 'normal' ? 'completed' : 'attention'} size="sm" className="hidden md:inline-flex">
                           {iv.flag === 'normal' ? 'Normal' : 'Low'}
                         </Badge>
@@ -635,12 +635,12 @@ export function Workspace() {
                     <Pill className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-semibold text-ink-900">
+                    <p className="text-[14.5px] font-semibold text-ink-900">
                       {m.name} <span className="tnum font-normal text-ink-500">· {m.dose}</span>
                     </p>
-                    <p className="text-[12px] text-ink-500">{m.route}</p>
+                    <p className="text-[13px] text-ink-500">{m.route}</p>
                   </div>
-                  {m.since !== '—' && <span className="text-[12px] text-ink-500">Since {m.since}</span>}
+                  {m.since !== '—' && <span className="text-[13px] text-ink-500">Since {m.since}</span>}
                   <Badge tone={m.tone} size="sm">
                     {m.status}
                   </Badge>
@@ -653,7 +653,7 @@ export function Workspace() {
           {tab === 'documents' && (
             <div className="animate-fade-up stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {documents.length === 0 && (
-                <p className="col-span-full px-1 py-8 text-center text-[13px] text-ink-500">No documents uploaded yet for this patient.</p>
+                <p className="col-span-full px-1 py-8 text-center text-[14px] text-ink-500">No documents uploaded yet for this patient.</p>
               )}
               {documents.map((d, i) => (
                 <Card key={d.name} style={{ ['--i' as string]: i }} interactive className="p-4">
@@ -663,11 +663,11 @@ export function Workspace() {
                     </div>
                     {d.signed && <Badge tone="completed" size="sm">Signed</Badge>}
                   </div>
-                  <p className="mt-3 text-[13px] font-semibold leading-snug text-ink-900">{d.name}</p>
-                  <p className="mt-1 text-[11.5px] text-ink-500">
+                  <p className="mt-3 text-[14px] font-semibold leading-snug text-ink-900">{d.name}</p>
+                  <p className="mt-1 text-[12.5px] text-ink-500">
                     {d.date} · {d.size}
                   </p>
-                  <button className="mt-2.5 flex items-center gap-1 text-[11.5px] font-medium text-brand-700 hover:text-brand-800">
+                  <button className="mt-2.5 flex items-center gap-1 text-[12.5px] font-medium text-brand-700 hover:text-brand-800">
                     <Download className="h-3 w-3" /> Download
                   </button>
                 </Card>
@@ -685,7 +685,7 @@ export function Workspace() {
                   { l: 'Outstanding', v: billingTotals.outstanding, tone: 'attention' as const },
                 ].map((s) => (
                   <Card key={s.l} className="p-4">
-                    <p className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-ink-400">{s.l}</p>
+                    <p className="text-[12.5px] font-medium uppercase tracking-[0.06em] text-ink-400">{s.l}</p>
                     <p className={cn('tnum mt-1.5 text-[24px] font-semibold', TONE[s.tone].text)}>
                       {formatINR(Math.round(s.v))}
                     </p>
@@ -693,7 +693,7 @@ export function Workspace() {
                 ))}
               </div>
               <Card className="p-4">
-                <div className="mb-2 flex justify-between text-[12.5px]">
+                <div className="mb-2 flex justify-between text-[13.5px]">
                   <span className="text-ink-600">Package utilisation</span>
                   <span className="tnum font-medium text-ink-900">{billingCollectedPct}% collected</span>
                 </div>

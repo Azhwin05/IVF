@@ -29,11 +29,11 @@ function MoneyTile({ label, value, tone, sub }: { label: string; value: number; 
   const v = useCountUp(value, 1200);
   return (
     <Card className="p-4">
-      <p className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-ink-400">{label}</p>
+      <p className="text-[12.5px] font-medium uppercase tracking-[0.06em] text-ink-400">{label}</p>
       <p className={cn('tnum tracking-display mt-1.5 text-[28px] font-semibold leading-none', TONE[tone].text)}>
         {formatINR(Math.round(v))}
       </p>
-      <p className="mt-1.5 text-[11.5px] text-ink-500">{sub}</p>
+      <p className="mt-1.5 text-[12.5px] text-ink-500">{sub}</p>
     </Card>
   );
 }
@@ -110,13 +110,13 @@ export function Billing() {
       <Card className="p-5">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[13px] font-semibold text-ink-900">Package collection progress</p>
-            <p className="text-[12px] text-ink-500">{Math.round(collected)}% of the billed value has been collected</p>
+            <p className="text-[14px] font-semibold text-ink-900">Package collection progress</p>
+            <p className="text-[13px] text-ink-500">{Math.round(collected)}% of the billed value has been collected</p>
           </div>
           <Badge tone="attention">{formatINR(Math.round(totals.outstanding))} pending</Badge>
         </div>
         <ProgressBar value={collected} height={10} />
-        <div className="mt-2 flex justify-between text-[11px] text-ink-400">
+        <div className="mt-2 flex justify-between text-[12px] text-ink-400">
           <span className="tnum">{formatINR(0)}</span>
           <span className="tnum">{formatINR(Math.round(totals.value))}</span>
         </div>
@@ -134,14 +134,14 @@ export function Billing() {
           <div className="overflow-hidden">
             <div className="hidden grid-cols-[1.1fr_2fr_1fr_1fr_90px] gap-4 border-y border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
               {['Invoice', 'Description', 'Amount', 'Method', 'Status'].map((h) => (
-                <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+                <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                   {h}
                 </span>
               ))}
             </div>
 
             {invoices.length === 0 && (
-              <p className="px-5 py-10 text-center text-[13px] text-ink-500">No invoices yet for this patient.</p>
+              <p className="px-5 py-10 text-center text-[14px] text-ink-500">No invoices yet for this patient.</p>
             )}
 
             <div className="stagger">
@@ -153,17 +153,17 @@ export function Billing() {
                 >
                   <div className="flex items-center justify-between gap-3 md:block">
                     <div>
-                      <p className="tnum text-[12.5px] font-semibold text-ink-900">{inv.id}</p>
-                      <p className="text-[11px] text-ink-400">{inv.date}</p>
+                      <p className="tnum text-[13.5px] font-semibold text-ink-900">{inv.id}</p>
+                      <p className="text-[12px] text-ink-400">{inv.date}</p>
                     </div>
                     <Badge tone={inv.status === 'Paid' ? 'completed' : 'attention'} size="sm" className="md:hidden">
                       {inv.status}
                     </Badge>
                   </div>
-                  <span className="text-[12.5px] text-ink-700">{inv.description}</span>
+                  <span className="text-[13.5px] text-ink-700">{inv.description}</span>
                   <div className="flex items-center justify-between gap-3 md:contents">
-                    <span className="tnum text-[13px] font-semibold text-ink-900">{formatINR(inv.amount)}</span>
-                    <span className="text-[12px] text-ink-500">{inv.method}</span>
+                    <span className="tnum text-[14px] font-semibold text-ink-900">{formatINR(inv.amount)}</span>
+                    <span className="text-[13px] text-ink-500">{inv.method}</span>
                   </div>
                   <Badge tone={inv.status === 'Paid' ? 'completed' : 'attention'} size="sm" className="hidden md:inline-flex">
                     {inv.status}
@@ -183,7 +183,7 @@ export function Billing() {
               </Button>
             </div>
             <div className="text-right">
-              <p className="text-[11px] text-ink-400">Total billed</p>
+              <p className="text-[12px] text-ink-400">Total billed</p>
               <p className="tnum text-[15px] font-semibold text-ink-900">
                 {formatINR(invoices.reduce((s, i) => s + i.amount, 0))}
               </p>
@@ -218,10 +218,10 @@ export function Billing() {
                       <X className="h-3 w-3 text-ink-400" strokeWidth={3} />
                     )}
                   </div>
-                  <span className="min-w-0 flex-1 text-[12.5px] text-ink-700">{inc.item}</span>
+                  <span className="min-w-0 flex-1 text-[13.5px] text-ink-700">{inc.item}</span>
                   <span
                     className={cn(
-                      'text-[11px] font-medium',
+                      'text-[12px] font-medium',
                       included ? 'text-brand-700' : additional ? 'text-sky-700' : 'text-ink-400'
                     )}
                   >

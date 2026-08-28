@@ -88,10 +88,10 @@ export function Administration() {
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/12">
                     <Icon className="h-[18px] w-[18px]" />
                   </div>
-                  <p className="mt-3 text-[13.5px] font-semibold text-ink-900">{g.group}</p>
+                  <p className="mt-3 text-[14.5px] font-semibold text-ink-900">{g.group}</p>
                   <div className="mt-2 space-y-1">
                     {g.items.map((it) => (
-                      <p key={it} className="flex items-center gap-1.5 text-[12px] text-ink-500">
+                      <p key={it} className="flex items-center gap-1.5 text-[13px] text-ink-500">
                         <span className="h-1 w-1 shrink-0 rounded-full bg-ink-300" /> {it}
                       </p>
                     ))}
@@ -111,14 +111,16 @@ export function Administration() {
                   style={{ ['--i' as string]: i }}
                   className="flex items-center justify-between gap-4 rounded-xl border border-ink-200/70 px-4 py-3"
                 >
-                  <span className="text-[13px] font-medium text-ink-800">{c.procedure}</span>
+                  <span className="text-[14px] font-medium text-ink-800">{c.procedure}</span>
                   <div className="flex items-center gap-3">
                     <span className="tnum text-[14px] font-semibold text-ink-900">{formatINR(c.charge)}</span>
                     <button
                       onClick={() => toast({ title: 'Charge updated', body: `${c.procedure} pricing saved.`, tone: 'success' })}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
+                      aria-label={`Edit charge for ${c.procedure}`}
+                      title="Edit charge"
+                      className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -141,9 +143,9 @@ export function Administration() {
                     </Badge>
                   )}
                 </div>
-                <p className="mt-3 text-[13.5px] font-semibold text-ink-900">{p.name}</p>
+                <p className="mt-3 text-[14.5px] font-semibold text-ink-900">{p.name}</p>
                 <p className="tnum mt-1 text-[22px] font-semibold text-ink-900">{formatINR(p.price)}</p>
-                <p className="mt-1 text-[11.5px] text-ink-500">{hasRealPackages ? p.validity : `Valid for ${p.validity}`}</p>
+                <p className="mt-1 text-[12.5px] text-ink-500">{hasRealPackages ? p.validity : `Valid for ${p.validity}`}</p>
               </Card>
             ))}
           </div>

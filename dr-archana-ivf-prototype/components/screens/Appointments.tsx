@@ -61,7 +61,7 @@ function MetricTile({ label, value, icon: Icon, tone }: { label: string; value: 
       <p className="tnum tracking-display mt-3 text-[24px] font-semibold leading-none text-ink-900">
         {Math.round(v)}
       </p>
-      <p className="mt-1.5 text-[12px] font-medium text-ink-600">{label}</p>
+      <p className="mt-1.5 text-[13px] font-medium text-ink-600">{label}</p>
     </Card>
   );
 }
@@ -147,7 +147,7 @@ function BookingModal({ open, onClose }: { open: boolean; onClose: () => void })
         {error && (
           <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-            <p className="text-[12.5px] leading-relaxed text-rose-700">{error}</p>
+            <p className="text-[13.5px] leading-relaxed text-rose-700">{error}</p>
           </div>
         )}
       </div>
@@ -239,8 +239,8 @@ export function Appointments() {
               !doctorFilter ? 'border-brand-400 bg-brand-50/60' : 'border-ink-200/70 bg-white hover:border-ink-300'
             )}
           >
-            <p className="text-[12.5px] font-semibold text-ink-900">All Doctors</p>
-            <p className="tnum text-[11px] text-ink-500">{metrics.total} appointments</p>
+            <p className="text-[13.5px] font-semibold text-ink-900">All Doctors</p>
+            <p className="tnum text-[12px] text-ink-500">{metrics.total} appointments</p>
           </button>
           {doctors.map((d) => {
             const todayCount = (appointmentsQuery.data ?? []).filter((a) => a.doctor_id === d.id).length;
@@ -255,10 +255,10 @@ export function Appointments() {
               >
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: doctorColor(d.id) }} />
-                  <p className="whitespace-nowrap text-[12.5px] font-semibold text-ink-900">{d.full_name}</p>
+                  <p className="whitespace-nowrap text-[13.5px] font-semibold text-ink-900">{d.full_name}</p>
                 </div>
-                <p className="text-[11px] text-ink-500">{d.department ?? 'Reproductive Medicine'}</p>
-                <p className="tnum mt-0.5 text-[11px] font-medium text-ink-600">{todayCount} today</p>
+                <p className="text-[12px] text-ink-500">{d.department ?? 'Reproductive Medicine'}</p>
+                <p className="tnum mt-0.5 text-[12px] font-medium text-ink-600">{todayCount} today</p>
               </button>
             );
           })}
@@ -277,7 +277,7 @@ export function Appointments() {
                 key={s}
                 onClick={() => setStatus(s)}
                 className={cn(
-                  'shrink-0 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all',
+                  'shrink-0 rounded-md px-3 py-1.5 text-[13.5px] font-medium transition-all',
                   status === s ? 'bg-white text-ink-900 shadow-card' : 'text-ink-500 hover:text-ink-800'
                 )}
               >
@@ -305,7 +305,7 @@ export function Appointments() {
         <Card className="overflow-hidden">
           <div className="hidden grid-cols-[80px_1.8fr_1.4fr_1fr_1fr_110px] items-center gap-4 border-b border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
             {['Time', 'Patient', 'Visit Type', 'Doctor', 'Channel', 'Status'].map((h) => (
-              <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+              <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                 {h}
               </span>
             ))}
@@ -321,21 +321,21 @@ export function Appointments() {
                   onClick={() => openPatient(b.patient_id)}
                   className="flex w-full flex-col gap-2 border-b border-ink-100 px-4 py-3.5 text-left last:border-0 transition-colors hover:bg-ink-50/60 sm:px-5 md:grid md:grid-cols-[80px_1.8fr_1.4fr_1fr_1fr_110px] md:items-center md:gap-4"
                 >
-                  <span className="tnum text-[13px] font-semibold text-ink-900">
+                  <span className="tnum text-[14px] font-semibold text-ink-900">
                     {time.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}
                   </span>
                   <div className="flex items-center gap-3">
                     <Avatar initials={initialsOf(patientName)} size="sm" gradient="from-ink-400 to-ink-600" />
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium text-ink-900">{patientName}</p>
+                      <p className="truncate text-[14px] font-medium text-ink-900">{patientName}</p>
                     </div>
                   </div>
-                  <span className="text-[12.5px] text-ink-700">{b.visit_type}</span>
+                  <span className="text-[13.5px] text-ink-700">{b.visit_type}</span>
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: doctorColor(b.doctor_id) }} />
-                    <span className="truncate text-[12px] text-ink-600">{doctorName(b.doctor_id).replace('Dr. ', '')}</span>
+                    <span className="truncate text-[13px] text-ink-600">{doctorName(b.doctor_id).replace('Dr. ', '')}</span>
                   </div>
-                  <span className="text-[12px] text-ink-500">{b.channel.replace('_', ' ')}</span>
+                  <span className="text-[13px] text-ink-500">{b.channel.replace('_', ' ')}</span>
                   <Badge tone={STATUS_TONE[b.status] ?? 'neutral'} size="sm">
                     {STATUS_LABEL[b.status] ?? b.status}
                   </Badge>

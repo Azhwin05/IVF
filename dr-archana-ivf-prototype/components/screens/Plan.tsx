@@ -133,7 +133,7 @@ export function Plan() {
                 </div>
                 <p
                   className={cn(
-                    'mt-2 max-w-full text-center text-[10px] font-medium leading-tight sm:text-[12px]',
+                    'mt-2 max-w-full text-center text-[11.5px] font-medium leading-tight sm:text-[13px]',
                     s.status === 'todo' ? 'text-ink-400' : 'text-ink-900'
                   )}
                 >
@@ -189,12 +189,12 @@ export function Plan() {
                       <Pill className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-semibold text-ink-900">
+                      <p className="text-[14.5px] font-semibold text-ink-900">
                         {m.name} <span className="tnum font-normal text-ink-500">· {m.dose}</span>
                       </p>
-                      <p className="text-[12px] text-ink-500">{m.route}</p>
+                      <p className="text-[13px] text-ink-500">{m.route}</p>
                     </div>
-                    {since && <span className="text-[11.5px] text-ink-400">From {since}</span>}
+                    {since && <span className="text-[12.5px] text-ink-400">From {since}</span>}
                     <Badge tone={tone} size="sm">
                       {m.status}
                     </Badge>
@@ -209,7 +209,7 @@ export function Plan() {
             <div className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
               {INVESTIGATIONS.slice(0, 6).map((iv) => (
                 <div key={iv.name} className="flex items-center justify-between rounded-lg bg-ink-50/70 px-3 py-2">
-                  <span className="min-w-0 truncate text-[12.5px] text-ink-700">{iv.name}</span>
+                  <span className="min-w-0 truncate text-[13.5px] text-ink-700">{iv.name}</span>
                   <Badge tone={iv.flag === 'normal' ? 'completed' : 'attention'} size="sm">
                     {iv.value}
                   </Badge>
@@ -242,8 +242,8 @@ export function Plan() {
                       {signed ? <Check className="h-3 w-3 text-white" strokeWidth={3.5} /> : <Circle className="h-2 w-2 text-amber-600" fill="currentColor" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12.5px] font-medium text-ink-800">{c.l}</p>
-                      <p className="text-[11px] text-ink-400">{c.d}</p>
+                      <p className="text-[13.5px] font-medium text-ink-800">{c.l}</p>
+                      <p className="text-[12px] text-ink-400">{c.d}</p>
                     </div>
                   </div>
                 );
@@ -254,12 +254,12 @@ export function Plan() {
           <Card>
             <CardHeader icon={<Receipt className="h-4 w-4" />} title="Package Details" />
             <div className="px-5 pb-5">
-              <p className="text-[13.5px] font-semibold text-ink-900">{PACKAGE.name}</p>
+              <p className="text-[14.5px] font-semibold text-ink-900">{PACKAGE.name}</p>
               <p className="tnum mt-1 text-[26px] font-semibold text-ink-900">
                 {formatINR(PACKAGE.value)}
               </p>
               <div className="mt-3">
-                <div className="mb-1.5 flex justify-between text-[11.5px]">
+                <div className="mb-1.5 flex justify-between text-[12.5px]">
                   <span className="text-ink-500">Collected</span>
                   <span className="tnum font-medium text-ink-800">
                     {formatINR(PACKAGE.paid)} of {formatINR(PACKAGE.value)}

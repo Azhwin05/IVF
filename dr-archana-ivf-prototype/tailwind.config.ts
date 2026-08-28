@@ -15,13 +15,17 @@ const config: Config = {
       },
       colors: {
         // Warm ink neutrals — the spine of the interface
+        // 400/500 are darkened from the stock Tailwind stone values so that
+        // secondary text and field labels meet WCAG AA contrast (≥4.5:1) on
+        // white — this UI is used by non-technical clinic staff on monitors
+        // and iPads, often in bright rooms.
         ink: {
           50: '#FAFAF9',
           100: '#F5F5F4',
           200: '#E7E5E4',
           300: '#D6D3D1',
-          400: '#A8A29E',
-          500: '#78716C',
+          400: '#7D766F',
+          500: '#645D57',
           600: '#57534E',
           700: '#44403C',
           800: '#292524',

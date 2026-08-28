@@ -35,6 +35,34 @@ body {
   overflow: hidden;
 }
 
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
+
+/* Text-size preference (set from the "Aa" control in the top bar and
+   persisted in localStorage). `zoom` reflows layout properly — unlike
+   transform: scale — and is supported by Chrome and by Safari on iPad,
+   the two browsers this clinic actually uses. */
+.text-scale-large {
+  zoom: 1.12;
+}
+.text-scale-xl {
+  zoom: 1.25;
+}
+
+/* Respect the OS-level "reduce motion" setting: kill decorative
+   animation and transitions so the interface is calm and immediate. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Numerals align in columns — essential for clinical data */
 .tnum {
   font-variant-numeric: tabular-nums;

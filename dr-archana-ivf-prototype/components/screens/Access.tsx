@@ -54,9 +54,9 @@ export function Access() {
                   </Badge>
                 )}
               </div>
-              <p className="mt-3 text-[13.5px] font-semibold text-ink-900">{u.title}</p>
-              <p className="mt-0.5 text-[11.5px] text-ink-500">{u.name}</p>
-              <div className="mt-2.5 flex items-center gap-3 text-[11px]">
+              <p className="mt-3 text-[14.5px] font-semibold text-ink-900">{u.title}</p>
+              <p className="mt-0.5 text-[12.5px] text-ink-500">{u.name}</p>
+              <div className="mt-2.5 flex items-center gap-3 text-[12px]">
                 <span className="flex items-center gap-1 text-brand-700">
                   <Check className="h-3 w-3" /> {ROLE_MATRIX[r].allowed.length} allowed
                 </span>
@@ -92,7 +92,7 @@ export function Access() {
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600">
                 <Check className="h-3 w-3 text-white" strokeWidth={3.5} />
               </div>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-brand-700">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-brand-700">
                 Allowed ({matrix.allowed.length})
               </p>
             </div>
@@ -104,7 +104,7 @@ export function Access() {
                   className="flex items-center gap-2.5 rounded-lg border border-brand-200/60 bg-brand-50/40 px-3 py-2.5"
                 >
                   <Check className="h-3.5 w-3.5 shrink-0 text-brand-600" strokeWidth={3} />
-                  <span className="text-[12.5px] font-medium text-brand-900">{a}</span>
+                  <span className="text-[13.5px] font-medium text-brand-900">{a}</span>
                 </div>
               ))}
             </div>
@@ -116,7 +116,7 @@ export function Access() {
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-ink-300">
                 <X className="h-3 w-3 text-white" strokeWidth={3.5} />
               </div>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-500">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-500">
                 Restricted ({matrix.restricted.length})
               </p>
             </div>
@@ -128,7 +128,7 @@ export function Access() {
                   className="flex items-center gap-2.5 rounded-lg border border-ink-200/60 bg-ink-50/60 px-3 py-2.5"
                 >
                   <Lock className="h-3.5 w-3.5 shrink-0 text-ink-400" />
-                  <span className="text-[12.5px] text-ink-500">{r}</span>
+                  <span className="text-[13.5px] text-ink-500">{r}</span>
                 </div>
               ))}
             </div>
@@ -149,11 +149,11 @@ export function Access() {
         <div className="overflow-x-auto">
           <div className="min-w-[720px]">
             <div className="grid grid-cols-[2fr_repeat(4,1fr)] gap-4 border-y border-ink-200/70 bg-ink-50/60 px-5 py-2.5">
-              <span className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+              <span className="text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                 Module
               </span>
               {ROLES.map((r) => (
-                <span key={r} className="text-center text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+                <span key={r} className="text-center text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                   {USERS[r].title.split(' ')[0]}
                 </span>
               ))}
@@ -174,7 +174,7 @@ export function Access() {
                 style={{ ['--i' as string]: i }}
                 className="grid grid-cols-[2fr_repeat(4,1fr)] items-center gap-4 border-b border-ink-100 px-5 py-3 last:border-0 hover:bg-ink-50/60"
               >
-                <span className="text-[12.5px] font-medium text-ink-800">{row.m}</span>
+                <span className="text-[13.5px] font-medium text-ink-800">{row.m}</span>
                 {ROLES.map((r) => {
                   const ok = row.a.includes(r);
                   return (

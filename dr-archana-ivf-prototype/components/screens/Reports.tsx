@@ -37,7 +37,7 @@ function KpiTile({ k, i }: { k: (typeof MANAGEMENT_KPIS)[number]; i: number }) {
   const v = useCountUp(k.value, 1200);
   return (
     <Card className="p-4" style={{ ['--i' as string]: i }}>
-      <p className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-ink-400">{k.label}</p>
+      <p className="text-[12.5px] font-medium uppercase tracking-[0.06em] text-ink-400">{k.label}</p>
       <div className="mt-1.5 flex items-end gap-2">
         <span className="tnum tracking-display text-[30px] font-semibold leading-none text-ink-900">
           {Math.round(v)}
@@ -45,7 +45,7 @@ function KpiTile({ k, i }: { k: (typeof MANAGEMENT_KPIS)[number]; i: number }) {
         </span>
         <span
           className={cn(
-            'mb-1 flex items-center gap-0.5 text-[11.5px] font-semibold',
+            'mb-1 flex items-center gap-0.5 text-[12.5px] font-semibold',
             k.positive ? 'text-brand-700' : 'text-rose-600'
           )}
         >
@@ -130,7 +130,7 @@ export function Reports() {
                 key={r}
                 onClick={() => setRange(r)}
                 className={cn(
-                  'shrink-0 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all',
+                  'shrink-0 rounded-md px-3 py-1.5 text-[13.5px] font-medium transition-all',
                   range === r ? 'bg-white text-ink-900 shadow-card' : 'text-ink-500 hover:text-ink-800'
                 )}
               >
@@ -220,13 +220,13 @@ export function Reports() {
               style={{ ['--i' as string]: i }}
               className="rounded-xl border border-ink-200/70 bg-gradient-to-b from-white to-ink-50/50 p-3.5"
             >
-              <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-ink-400">
+              <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-ink-400">
                 {m.label}
               </p>
               <p className="tnum mt-1.5 text-[20px] font-semibold leading-none text-ink-900">{m.value}</p>
               <p
                 className={cn(
-                  'mt-1.5 flex items-center gap-0.5 text-[11px] font-semibold',
+                  'mt-1.5 flex items-center gap-0.5 text-[12px] font-semibold',
                   m.positive ? 'text-brand-700' : 'text-amber-600'
                 )}
               >
@@ -245,7 +245,7 @@ export function Reports() {
           <div className="overflow-hidden">
             <div className="hidden grid-cols-[2fr_1fr_1fr_1fr_1.2fr] gap-4 border-y border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
               {['Consultant', 'Consults', 'Cycles', 'Transfers', 'Success Rate'].map((h) => (
-                <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+                <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.09em] text-ink-400">
                   {h}
                 </span>
               ))}
@@ -257,15 +257,15 @@ export function Reports() {
                   style={{ ['--i' as string]: i }}
                   className="flex flex-col gap-2.5 border-b border-ink-100 px-4 py-3.5 last:border-0 hover:bg-ink-50/60 sm:px-5 md:grid md:grid-cols-[2fr_1fr_1fr_1fr_1.2fr] md:items-center md:gap-4"
                 >
-                  <span className="text-[13px] font-medium text-ink-900">{d.name}</span>
+                  <span className="text-[14px] font-medium text-ink-900">{d.name}</span>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 md:contents">
-                    <span className="tnum text-[11.5px] text-ink-500 md:text-[13px] md:text-ink-700">
+                    <span className="tnum text-[12.5px] text-ink-500 md:text-[14px] md:text-ink-700">
                       {d.consultations} consults
                     </span>
-                    <span className="tnum text-[11.5px] text-ink-500 md:text-[13px] md:text-ink-700">
+                    <span className="tnum text-[12.5px] text-ink-500 md:text-[14px] md:text-ink-700">
                       {d.cycles !== null ? `${d.cycles} cycles` : '—'}
                     </span>
-                    <span className="tnum text-[11.5px] text-ink-500 md:text-[13px] md:text-ink-700">
+                    <span className="tnum text-[12.5px] text-ink-500 md:text-[14px] md:text-ink-700">
                       {d.transfers !== null ? `${d.transfers} transfers` : '—'}
                     </span>
                   </div>
@@ -277,10 +277,10 @@ export function Reports() {
                           style={{ width: `${d.success}%`, transitionDelay: `${i * 120}ms` }}
                         />
                       </div>
-                      <span className="tnum text-[12px] font-semibold text-ink-900">{d.success}%</span>
+                      <span className="tnum text-[13px] font-semibold text-ink-900">{d.success}%</span>
                     </div>
                   ) : (
-                    <span className="text-[11.5px] text-ink-400">Not available yet</span>
+                    <span className="text-[12.5px] text-ink-400">Not available yet</span>
                   )}
                 </div>
               ))}

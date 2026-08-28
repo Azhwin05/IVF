@@ -50,8 +50,8 @@ export function CardHeader({
           </div>
         )}
         <div className="min-w-0">
-          <h3 className="text-[15px] font-semibold tracking-[-0.011em] text-ink-900">{title}</h3>
-          {subtitle && <p className="mt-0.5 text-[13px] leading-relaxed text-ink-500">{subtitle}</p>}
+          <h3 className="text-[16px] font-semibold tracking-[-0.011em] text-ink-900">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-[13.5px] leading-relaxed text-ink-500">{subtitle}</p>}
         </div>
       </div>
       {action && <div className="shrink-0">{action}</div>}
@@ -83,7 +83,7 @@ export function Badge({
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full font-medium ring-1 ring-inset',
         wrap ? 'whitespace-normal text-left' : 'whitespace-nowrap',
-        size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs',
+        size === 'sm' ? 'px-2 py-0.5 text-[12px]' : 'px-2.5 py-1 text-[13px]',
         t.bg,
         t.text,
         t.ring,
@@ -128,10 +128,13 @@ export function Button({
     danger: 'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800',
     dark: 'bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-950',
   };
+  // Minimum heights follow Apple's 44pt touch guideline — this UI runs on
+  // iPads at the nursing stations, so every button must be comfortably
+  // tappable, not just clickable.
   const sizes = {
-    sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-lg',
-    md: 'h-9.5 px-3.5 text-[13.5px] gap-2 rounded-lg',
-    lg: 'h-11 px-5 text-[14.5px] gap-2 rounded-xl',
+    sm: 'h-9 px-3.5 text-[13.5px] gap-1.5 rounded-lg',
+    md: 'h-11 px-4 text-[14.5px] gap-2 rounded-lg',
+    lg: 'h-12 px-5 text-[15.5px] gap-2 rounded-xl',
   };
   return (
     <button
@@ -141,7 +144,6 @@ export function Button({
         variants[variant],
         className
       )}
-      style={size === 'md' ? { height: '2.375rem' } : undefined}
       disabled={loading || rest.disabled}
       {...rest}
     >
@@ -210,8 +212,8 @@ export function Field({
 }) {
   return (
     <div className={className}>
-      <dt className="text-[11px] font-medium uppercase tracking-[0.07em] text-ink-400">{label}</dt>
-      <dd className={cn('mt-1 text-[13.5px] font-medium text-ink-800', mono && 'tnum')}>{value}</dd>
+      <dt className="text-[12px] font-medium uppercase tracking-[0.07em] text-ink-500">{label}</dt>
+      <dd className={cn('mt-1 text-[14.5px] font-medium text-ink-800', mono && 'tnum')}>{value}</dd>
     </div>
   );
 }
@@ -227,13 +229,13 @@ export function DataRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-ink-100 py-2.5 last:border-0">
-      <span className="text-[13px] text-ink-500">{label}</span>
+      <span className="text-[14px] text-ink-500">{label}</span>
       {tone ? (
         <Badge tone={tone} size="sm">
           {value}
         </Badge>
       ) : (
-        <span className="tnum text-[13px] font-medium text-ink-800">{value}</span>
+        <span className="tnum text-[14px] font-medium text-ink-800">{value}</span>
       )}
     </div>
   );
@@ -259,13 +261,13 @@ export function SectionTitle({
         {eyebrow && (
           <div className="mb-1.5 flex items-center gap-2">
             <span className="h-px w-6 bg-brand-500" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-700">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-brand-700">
               {eyebrow}
             </span>
           </div>
         )}
-        <h2 className="tracking-display text-[21px] font-semibold text-ink-900 sm:text-[26px]">{title}</h2>
-        {description && <p className="mt-1 text-[13px] text-ink-500 sm:text-[13.5px]">{description}</p>}
+        <h2 className="tracking-display text-[22px] font-semibold text-ink-900 sm:text-[27px]">{title}</h2>
+        {description && <p className="mt-1 text-[14px] text-ink-500 sm:text-[14.5px]">{description}</p>}
       </div>
       {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
     </div>
@@ -343,8 +345,9 @@ export function Tabs({
             key={t.id}
             onClick={() => onChange(t.id)}
             data-active={isActive}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'tab-underline relative whitespace-nowrap px-3.5 pb-3 pt-2 text-[13.5px] font-medium transition-colors',
+              'tab-underline relative whitespace-nowrap px-4 py-3 text-[14.5px] font-medium transition-colors',
               isActive ? 'text-brand-700' : 'text-ink-500 hover:text-ink-800'
             )}
           >
@@ -352,7 +355,7 @@ export function Tabs({
             {typeof t.count === 'number' && (
               <span
                 className={cn(
-                  'tnum ml-1.5 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold',
+                  'tnum ml-1.5 rounded-full px-1.5 py-0.5 text-[12px] font-semibold',
                   isActive ? 'bg-brand-100 text-brand-700' : 'bg-ink-100 text-ink-500'
                 )}
               >
@@ -403,14 +406,15 @@ export function Modal({
       <div className={cn('modal-in relative max-h-[90vh] w-full overflow-hidden rounded-2xl bg-white shadow-pop flex flex-col', width)}>
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-ink-100 px-4 py-4 sm:px-6 sm:py-5">
           <div className="min-w-0">
-            <h3 className="text-[15.5px] font-semibold tracking-[-0.014em] text-ink-900 sm:text-[17px]">{title}</h3>
-            {subtitle && <p className="mt-1 text-[12.5px] text-ink-500 sm:text-[13px]">{subtitle}</p>}
+            <h3 className="text-[16.5px] font-semibold tracking-[-0.014em] text-ink-900 sm:text-[18px]">{title}</h3>
+            {subtitle && <p className="mt-1 text-[13.5px] text-ink-500 sm:text-[14px]">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
+            aria-label="Close dialog"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
         <div className="scroll-area min-h-0 flex-1 px-4 py-4 sm:px-6 sm:py-5">{children}</div>
@@ -461,14 +465,15 @@ export function ToastStack({
               <Icon className="h-4 w-4" strokeWidth={2.5} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[13.5px] font-semibold text-ink-900">{t.title}</p>
-              {t.body && <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-500">{t.body}</p>}
+              <p className="text-[14.5px] font-semibold text-ink-900">{t.title}</p>
+              {t.body && <p className="mt-0.5 text-[13.5px] leading-relaxed text-ink-500">{t.body}</p>}
             </div>
             <button
               onClick={() => onDismiss(t.id)}
-              className="rounded-md p-1 text-ink-300 transition-colors hover:bg-ink-100 hover:text-ink-600"
+              aria-label="Dismiss notification"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-600"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         );
@@ -495,7 +500,7 @@ export function InfoNote({
     amber: 'bg-amber-50/70 border-amber-200/70 text-amber-800',
   };
   return (
-    <div className={cn('flex gap-2.5 rounded-xl border p-3.5 text-[13px] leading-relaxed', map[tone])}>
+    <div className={cn('flex gap-2.5 rounded-xl border p-3.5 text-[14px] leading-relaxed', map[tone])}>
       {icon && <div className="mt-0.5 shrink-0">{icon}</div>}
       <div>{children}</div>
     </div>
@@ -516,16 +521,16 @@ export function ActionRow({
   return (
     <button
       onClick={onClick}
-      className="lift group flex w-full items-center gap-3 rounded-xl border border-ink-200/70 bg-white p-3.5 text-left hover:border-brand-300/70 hover:shadow-lift"
+      className="lift group flex min-h-[56px] w-full items-center gap-3 rounded-xl border border-ink-200/70 bg-white p-4 text-left hover:border-brand-300/70 hover:shadow-lift"
     >
       {icon && (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-brand-600/10 transition-colors group-hover:bg-brand-100">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-brand-600/10 transition-colors group-hover:bg-brand-100">
           {icon}
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-[13.5px] font-medium text-ink-900">{label}</p>
-        {description && <p className="mt-0.5 text-[12px] text-ink-500">{description}</p>}
+        <p className="text-[14.5px] font-medium text-ink-900">{label}</p>
+        {description && <p className="mt-0.5 text-[13px] text-ink-500">{description}</p>}
       </div>
       <ChevronRight className="h-4 w-4 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-600" />
     </button>
@@ -549,7 +554,7 @@ export function Input({
   return (
     <label className="block">
       {label && (
-        <span className="mb-1.5 block text-[12.5px] font-medium text-ink-700">{label}</span>
+        <span className="mb-1.5 block text-[13.5px] font-medium text-ink-700">{label}</span>
       )}
       <div className="relative">
         {icon && (
@@ -559,14 +564,14 @@ export function Input({
         )}
         <input
           className={cn(
-            'h-10 w-full rounded-lg border border-ink-200 bg-white px-3 text-[13.5px] text-ink-900 transition-shadow placeholder:text-ink-400',
+            'h-11 w-full rounded-lg border border-ink-200 bg-white px-3 text-[14.5px] text-ink-900 transition-shadow placeholder:text-ink-400',
             icon && 'pl-9',
             className
           )}
           {...rest}
         />
       </div>
-      {hint && <span className="mt-1 block text-[11.5px] text-ink-400">{hint}</span>}
+      {hint && <span className="mt-1 block text-[12.5px] text-ink-500">{hint}</span>}
     </label>
   );
 }
@@ -579,10 +584,10 @@ export function Select({
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
   return (
     <label className="block">
-      {label && <span className="mb-1.5 block text-[12.5px] font-medium text-ink-700">{label}</span>}
+      {label && <span className="mb-1.5 block text-[13.5px] font-medium text-ink-700">{label}</span>}
       <select
         className={cn(
-          'h-10 w-full rounded-lg border border-ink-200 bg-white px-3 text-[13.5px] text-ink-900',
+          'h-11 w-full rounded-lg border border-ink-200 bg-white px-3 text-[14.5px] text-ink-900',
           className
         )}
         {...rest}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { useApp } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
 import { useHotkey } from '@/lib/hooks';
@@ -115,11 +116,30 @@ function ScreenRouter() {
   }
 }
 
+export type TextScale = 'standard' | 'large' | 'xl';
+
 export function AppShell() {
   const { role, toasts, dismissToast, setPaletteOpen, paletteOpen, screen } = useApp();
   const { initializing } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Text-size preference for staff who find the default too small. Read
+  // after mount (not in the useState initializer) so server and client
+  // render identically on first paint.
+  const [textScale, setTextScaleState] = useState<TextScale>('standard');
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('text-scale');
+      if (stored === 'large' || stored === 'xl') setTextScaleState(stored);
+    } catch {}
+  }, []);
+  const setTextScale = (s: TextScale) => {
+    setTextScaleState(s);
+    try {
+      localStorage.setItem('text-scale', s);
+    } catch {}
+  };
 
   useHotkey('k', () => setPaletteOpen(!paletteOpen));
 
@@ -143,7 +163,13 @@ export function AppShell() {
   if (!role) return <Login />;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-ink-50">
+    <div
+      className={cn(
+        'flex h-screen w-full overflow-hidden bg-ink-50',
+        textScale === 'large' && 'text-scale-large',
+        textScale === 'xl' && 'text-scale-xl'
+      )}
+    >
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
@@ -152,7 +178,11 @@ export function AppShell() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />
+        <Topbar
+          onOpenMobileNav={() => setMobileNavOpen(true)}
+          textScale={textScale}
+          onTextScaleChange={setTextScale}
+        />
         <main key={screen} className="scroll-area relative flex-1">
           <ScreenRouter />
         </main>
