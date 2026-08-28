@@ -19,6 +19,15 @@ from app.users.models import User
 router = APIRouter(prefix="/billing", tags=["billing"])
 
 
+@router.get("/invoices", response_model=list[InvoiceOut])
+async def list_invoices(
+    patient_id: str | None = None,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("billing.read")),
+) -> list[InvoiceOut]:
+    return await service.list_invoices(session, patient_id=patient_id)
+
+
 @router.post("/invoices", response_model=InvoiceOut, status_code=201)
 async def create_invoice(
     body: InvoiceCreate,

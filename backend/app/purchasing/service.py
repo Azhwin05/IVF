@@ -12,6 +12,11 @@ from app.purchasing.models import GoodsReceiptNote, PurchaseOrder, PurchaseOrder
 from app.purchasing.schemas import GRNCreate, PurchaseOrderCreate
 
 
+async def list_purchase_orders(session: AsyncSession) -> list[PurchaseOrder]:
+    result = await session.execute(select(PurchaseOrder).order_by(PurchaseOrder.created_at.desc()))
+    return list(result.scalars().all())
+
+
 async def _next_po_number(session: AsyncSession) -> str:
     year = datetime.now(timezone.utc).year
     prefix = f"PO-{year}-"

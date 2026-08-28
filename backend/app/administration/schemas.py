@@ -38,3 +38,13 @@ class LabTestCreate(BaseModel):
     price_paise: int
     turnaround_time: str
     sample_type: str | None = None
+
+
+class LabTestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    test_name: str
+    price_paise: int
+    turnaround_time: str
+    sample_type: str | None
+    is_active: bool

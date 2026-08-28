@@ -28,6 +28,14 @@ from app.core.exceptions import ConflictError, NotFoundError, ValidationFailedEr
 from app.events.bus import EventType, emit
 
 
+async def list_invoices(session: AsyncSession, *, patient_id: uuid.UUID | None = None) -> list[Invoice]:
+    stmt = select(Invoice).order_by(Invoice.created_at.desc())
+    if patient_id:
+        stmt = stmt.where(Invoice.patient_id == patient_id)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def _next_sequence_number(session: AsyncSession, *, prefix: str, table, column) -> str:
     """Generates INV-2026-00001 / RCP-2026-00001 style numbers under a
     SELECT ... FOR UPDATE-equivalent guard: PostgreSQL's row locking on the

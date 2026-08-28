@@ -153,6 +153,11 @@ async def dispense(
     return sale
 
 
+async def list_sales(session: AsyncSession, *, limit: int = 100) -> list[PharmacySale]:
+    result = await session.execute(select(PharmacySale).order_by(PharmacySale.created_at.desc()).limit(limit))
+    return list(result.scalars().all())
+
+
 async def get_sale(session: AsyncSession, sale_id: uuid.UUID) -> PharmacySale:
     sale = await session.get(PharmacySale, sale_id)
     if not sale:

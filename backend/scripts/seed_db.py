@@ -203,11 +203,123 @@ async def seed_demo_clinical_data(session, staff: dict[str, User]) -> None:
     print("Seeded pregnancy record with 3 beta-hCG results and 6 milestones")
 
 
+async def seed_master_data(session) -> None:
+    """Clinic-wide reference/catalogue data — medicines, inventory,
+    lab tests, procedure pricing, packages, employee directory. Unlike
+    seed_demo_clinical_data (one patient's story), this is data every
+    real deployment needs on day one regardless of demo patients, so it
+    always runs, not just under --with-demo-data."""
+    from app.billing.models import Package, ProcedureCharge
+    from app.hr.models import Employee, LeaveRequest, LeaveStatus
+    from app.inventory.models import InventoryCategory, InventoryItem
+    from app.laboratory.models import LabTestCatalogueItem
+    from app.pharmacy.models import Medicine, MedicineBatch
+
+    existing = (await session.execute(select(Medicine).limit(1))).scalar_one_or_none()
+    if existing:
+        print("Master data already present — skipping.")
+        return
+
+    medicines = [
+        Medicine(generic_name="Gonal-F", brand_name="Gonal-F 225 IU Injection", category="Gonadotropin", unit="Pen", gst_percent=12, reorder_level=20),
+        Medicine(generic_name="Cetrorelix", brand_name="Cetrotide 0.25mg Injection", category="GnRH Antagonist", unit="Vial", gst_percent=12, reorder_level=20),
+        Medicine(generic_name="Choriogonadotropin alfa", brand_name="Ovitrelle 250mcg Injection", category="Trigger Agent", unit="Pen", gst_percent=12, reorder_level=15),
+        Medicine(generic_name="Progesterone", brand_name="Progesterone 400mg Pessary", category="Luteal Support", unit="Strip", gst_percent=12, reorder_level=100),
+        Medicine(generic_name="Folic Acid", brand_name="Folic Acid 5mg Tablet", category="Supplement", unit="Strip", gst_percent=5, reorder_level=150),
+        Medicine(generic_name="Gonal-F (multidose)", brand_name="Gonal-F 900 IU Multidose", category="Gonadotropin", unit="Pen", gst_percent=12, reorder_level=10),
+        Medicine(generic_name="Dydrogesterone", brand_name="Duphaston 10mg Tablet", category="Luteal Support", unit="Strip", gst_percent=12, reorder_level=80),
+        Medicine(generic_name="hCG", brand_name="HCG 5000IU Injection", category="Trigger Agent", unit="Vial", gst_percent=12, reorder_level=15),
+    ]
+    session.add_all(medicines)
+    await session.flush()
+
+    batch_specs = [
+        ("GNF-2607", date(2027, 3, 31), 345000, 42),
+        ("CTR-1182", date(2027, 1, 31), 128000, 18),
+        ("OVT-0994", date(2026, 11, 30), 215000, 9),
+        ("PRG-3341", date(2027, 6, 30), 48000, 210),
+        ("FA-7712", date(2027, 9, 30), 4500, 340),
+        ("GNF-2588", date(2027, 2, 28), 1120000, 6),
+        ("DUP-4471", date(2027, 8, 31), 22000, 128),
+        ("HCG-2201", date(2026, 12, 31), 89000, 14),
+    ]
+    for medicine, (batch_no, expiry, rate_paise, qty) in zip(medicines, batch_specs):
+        session.add(MedicineBatch(
+            medicine_id=medicine.id, batch_number=batch_no, expiry_date=expiry,
+            purchase_rate_paise=int(rate_paise * 0.8), selling_rate_paise=rate_paise,
+            quantity_received=qty, quantity_available=qty,
+        ))
+
+    session.add_all([
+        InventoryItem(name="ICSI Micropipettes", category=InventoryCategory.IVF_CONSUMABLES, unit="Pieces", stock=84, reorder_level=50, location="Embryology Lab — Cabinet A", supplier="Cook Medical", last_restocked=date(2026, 7, 18)),
+        InventoryItem(name="Embryo Culture Media (Sequential)", category=InventoryCategory.IVF_CONSUMABLES, unit="Kits", stock=6, reorder_level=10, location="Embryology Lab — Cold Storage", supplier="Vitrolife", last_restocked=date(2026, 7, 10)),
+        InventoryItem(name="Vitrification Straws", category=InventoryCategory.CRYOGENIC_SUPPLIES, unit="Pieces", stock=145, reorder_level=100, location="Cryostorage Room", supplier="CryoBio Systems", last_restocked=date(2026, 7, 22)),
+        InventoryItem(name="Liquid Nitrogen", category=InventoryCategory.CRYOGENIC_SUPPLIES, unit="Dewars (50L)", stock=2, reorder_level=3, location="Cryostorage Room", supplier="Chennai Cryogenics", last_restocked=date(2026, 7, 25)),
+        InventoryItem(name="Oocyte Retrieval Needles", category=InventoryCategory.SURGICAL_EQUIPMENT, unit="Pieces", stock=22, reorder_level=15, location="OT — Store 2", supplier="Cook Medical", last_restocked=date(2026, 7, 15)),
+        InventoryItem(name="Embryo Transfer Catheters", category=InventoryCategory.SURGICAL_EQUIPMENT, unit="Pieces", stock=11, reorder_level=15, location="OT — Store 2", supplier="Cook Medical", last_restocked=date(2026, 7, 12)),
+        InventoryItem(name="Sterile Petri Dishes", category=InventoryCategory.LAB_SUPPLIES, unit="Pieces", stock=320, reorder_level=150, location="Embryology Lab — Cabinet B", supplier="Nunc / Thermo Fisher", last_restocked=date(2026, 7, 20)),
+        InventoryItem(name="Ultrasound Gel", category=InventoryCategory.LAB_SUPPLIES, unit="Bottles (5L)", stock=4, reorder_level=6, location="Scan Room 1 & 2", supplier="Sonogel India", last_restocked=date(2026, 7, 8)),
+    ])
+
+    session.add_all([
+        LabTestCatalogueItem(test_name="AMH (Anti-Müllerian Hormone)", price_paise=220000, turnaround_time="24 hrs", sample_type="Blood"),
+        LabTestCatalogueItem(test_name="FSH / LH Panel", price_paise=90000, turnaround_time="12 hrs", sample_type="Blood"),
+        LabTestCatalogueItem(test_name="Estradiol (E2)", price_paise=75000, turnaround_time="6 hrs", sample_type="Blood"),
+        LabTestCatalogueItem(test_name="Beta-hCG (Quantitative)", price_paise=65000, turnaround_time="4 hrs", sample_type="Blood"),
+        LabTestCatalogueItem(test_name="Semen Analysis (Advanced)", price_paise=150000, turnaround_time="24 hrs", sample_type="Semen"),
+        LabTestCatalogueItem(test_name="Thyroid Profile (TSH, T3, T4)", price_paise=85000, turnaround_time="12 hrs", sample_type="Blood"),
+        LabTestCatalogueItem(test_name="Karyotyping", price_paise=650000, turnaround_time="10 days", sample_type="Blood"),
+    ])
+
+    session.add_all([
+        ProcedureCharge(service_code="CONS-INIT", procedure_name="Initial IVF Consultation", charge_paise=150000),
+        ProcedureCharge(service_code="CONS-FUP", procedure_name="Follow-up Consultation", charge_paise=80000),
+        ProcedureCharge(service_code="SCAN-FOL", procedure_name="Follicle Monitoring Scan", charge_paise=120000),
+        ProcedureCharge(service_code="PROC-TVOR", procedure_name="Oocyte Retrieval (TVOR)", charge_paise=4500000),
+        ProcedureCharge(service_code="PROC-ICSI", procedure_name="ICSI Procedure", charge_paise=3500000),
+        ProcedureCharge(service_code="PROC-ET", procedure_name="Embryo Transfer", charge_paise=2500000),
+        ProcedureCharge(service_code="PROC-VIT", procedure_name="Embryo Vitrification (per batch)", charge_paise=1500000),
+        ProcedureCharge(service_code="CRYO-ANN", procedure_name="Cryostorage — Annual (per straw)", charge_paise=900000),
+    ])
+
+    session.add_all([
+        Package(name="Complete IVF Treatment Package", price_paise=25000000, validity_description="1 Cycle"),
+        Package(name="IUI Package (3 Cycles)", price_paise=7500000, validity_description="6 Months"),
+        Package(name="Frozen Embryo Transfer Package", price_paise=6500000, validity_description="1 Cycle"),
+        Package(name="Fertility Assessment Package", price_paise=1800000, validity_description="30 Days"),
+    ])
+
+    employees = [
+        Employee(full_name="Dr. Archana S. Ayyanathan", department="Reproductive Medicine", designation="Chief Consultant", phone="+91 98400 11223", joined_date=date(2014, 1, 2), leave_balance_days=12),
+        Employee(full_name="Dr. Kavya Raghunathan", department="Reproductive Medicine", designation="IVF Consultant", phone="+91 98400 22334", joined_date=date(2020, 3, 14), leave_balance_days=9),
+        Employee(full_name="Dr. Meera Kapoor", department="Embryology Laboratory", designation="Senior Embryologist", phone="+91 98400 33445", joined_date=date(2019, 6, 5), leave_balance_days=14),
+        Employee(full_name="Anand Kumar", department="Embryology Laboratory", designation="Lab Technician", phone="+91 98400 44556", joined_date=date(2021, 8, 20), leave_balance_days=8),
+        Employee(full_name="Lakshmi Narayanan", department="Patient Services", designation="Front Office Executive", phone="+91 98400 55667", joined_date=date(2022, 11, 11), leave_balance_days=6),
+        Employee(full_name="Divya Sundaresan", department="Nursing", designation="Staff Nurse", phone="+91 98400 66778", joined_date=date(2021, 2, 3), leave_balance_days=4),
+        Employee(full_name="Ganesh Prabhu", department="Pharmacy", designation="Pharmacist", phone="+91 98400 77889", joined_date=date(2020, 9, 17), leave_balance_days=10),
+        Employee(full_name="Rajesh Venkatesan", department="Operations & Finance", designation="Hospital Administrator", phone="+91 98400 88990", joined_date=date(2014, 1, 1), leave_balance_days=15),
+        Employee(full_name="Swathi Ramesh", department="Accounts", designation="Accountant", phone="+91 98400 99001", joined_date=date(2023, 7, 8), leave_balance_days=3),
+        Employee(full_name="Karthik Balan", department="Inventory", designation="Store & Inventory Manager", phone="+91 98400 10112", joined_date=date(2022, 4, 25), leave_balance_days=7),
+    ]
+    session.add_all(employees)
+    await session.flush()
+
+    by_name = {e.full_name: e for e in employees}
+    session.add_all([
+        LeaveRequest(employee_id=by_name["Divya Sundaresan"].id, leave_type="Sick Leave", from_date=date(2026, 7, 28), to_date=date(2026, 7, 30), status=LeaveStatus.APPROVED),
+        LeaveRequest(employee_id=by_name["Swathi Ramesh"].id, leave_type="Casual Leave", from_date=date(2026, 7, 29), to_date=date(2026, 7, 29), status=LeaveStatus.PENDING),
+        LeaveRequest(employee_id=by_name["Ganesh Prabhu"].id, leave_type="Annual Leave", from_date=date(2026, 8, 5), to_date=date(2026, 8, 9), status=LeaveStatus.PENDING),
+    ])
+
+    print(f"Seeded {len(medicines)} medicines, 8 inventory items, 7 lab tests, 8 procedure charges, 4 packages, {len(employees)} employees")
+
+
 async def main() -> None:
     with_demo = "--with-demo-data" in sys.argv
     async with AsyncSessionLocal() as session:
         await seed_roles_and_permissions(session)
         staff = await seed_staff(session)
+        await seed_master_data(session)
         if with_demo:
             await seed_demo_clinical_data(session, staff)
         await session.commit()

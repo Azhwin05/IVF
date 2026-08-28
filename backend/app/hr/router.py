@@ -27,6 +27,14 @@ async def create_employee(
     return await service.create_employee(session, body)
 
 
+@router.get("/leave-requests", response_model=list[LeaveRequestOut])
+async def list_leave_requests(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("hr.read")),
+) -> list[LeaveRequestOut]:
+    return await service.list_leave_requests(session)
+
+
 @router.post("/leave-requests", response_model=LeaveRequestOut, status_code=201)
 async def submit_leave(
     body: LeaveRequestCreate,

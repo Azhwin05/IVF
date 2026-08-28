@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.administration import service
 from app.administration.schemas import (
     LabTestCreate,
+    LabTestOut,
     PackageCreate,
     PackageOut,
     ProcedureChargeCreate,
@@ -48,6 +49,17 @@ async def create_package(
     current: User = Depends(require_permission("admin.manage_settings")),
 ) -> PackageOut:
     return await service.create_package(session, body, actor_id=current.id, actor_role=current.role.code)
+
+
+@router.get("/lab-tests", response_model=list[LabTestOut])
+async def list_lab_tests(
+    session: AsyncSession = Depends(get_db),
+    # Deliberately laboratory.read, not admin.manage_settings — the
+    # Laboratory screen (doctor/embryologist) needs to see the test
+    # catalogue for ordering, while only admin.manage_settings can edit it.
+    _: User = Depends(require_permission("laboratory.read")),
+) -> list[LabTestOut]:
+    return await service.list_lab_tests(session)
 
 
 @router.post("/lab-tests", status_code=201)

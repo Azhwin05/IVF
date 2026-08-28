@@ -108,6 +108,7 @@ from app.accounting.router import router as accounting_router
 from app.administration.router import router as administration_router
 from app.appointments.router import router as appointments_router
 from app.assets.router import router as assets_router
+from app.audit.router import router as audit_router
 from app.auth.router import router as auth_router
 from app.billing.router import router as billing_router
 from app.clinical.router import router as clinical_router
@@ -136,6 +137,6 @@ for router in (
     clinical_router, ivf_router, laboratory_router, embryology_router, cryostorage_router, ot_router,
     pharmacy_router, inventory_router, purchasing_router, billing_router, accounting_router,
     assets_router, maintenance_router, quality_router, hr_router,
-    notifications_router, printing_router, reports_router, administration_router,
+    notifications_router, printing_router, reports_router, administration_router, audit_router,
 ):
     app.include_router(router, prefix=settings.API_V1_PREFIX)

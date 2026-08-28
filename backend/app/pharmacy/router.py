@@ -39,6 +39,14 @@ async def dispense(
     return out
 
 
+@router.get("/sales", response_model=list[SaleOut])
+async def list_sales(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("pharmacy.read")),
+) -> list[SaleOut]:
+    return await service.list_sales(session)
+
+
 @router.get("/sales/{sale_id}", response_model=SaleOut)
 async def get_sale(
     sale_id: str,

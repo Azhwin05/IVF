@@ -10,6 +10,14 @@ from app.users.models import User
 router = APIRouter(prefix="/purchasing", tags=["purchasing"])
 
 
+@router.get("/orders", response_model=list[PurchaseOrderOut])
+async def list_orders(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("purchasing.read")),
+) -> list[PurchaseOrderOut]:
+    return await service.list_purchase_orders(session)
+
+
 @router.post("/orders", response_model=PurchaseOrderOut, status_code=201)
 async def create_request(
     body: PurchaseOrderCreate,

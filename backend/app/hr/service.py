@@ -23,6 +23,11 @@ async def list_employees(session: AsyncSession) -> list[Employee]:
     return list(result.scalars().all())
 
 
+async def list_leave_requests(session: AsyncSession) -> list[LeaveRequest]:
+    result = await session.execute(select(LeaveRequest).order_by(LeaveRequest.created_at.desc()))
+    return list(result.scalars().all())
+
+
 async def submit_leave_request(session: AsyncSession, data: LeaveRequestCreate) -> LeaveRequest:
     days_requested = (data.to_date - data.from_date).days + 1
     employee = await session.get(Employee, data.employee_id)
