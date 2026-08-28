@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './client';
-import type { CoupleCreate, CoupleOut, PatientListRow, PatientSummary } from './types';
+import type { CoupleCreate, CoupleOut, PatientDocumentOut, PatientListRow, PatientSummary } from './types';
 
 export function usePatients(search?: string) {
   return useQuery({
@@ -22,6 +22,14 @@ export function useCoupleForPatient(patientId: string | null) {
   return useQuery({
     queryKey: ['couple-for-patient', patientId],
     queryFn: () => apiFetch<CoupleOut | null>(`/patients/couples/by-patient/${patientId}`),
+    enabled: !!patientId,
+  });
+}
+
+export function usePatientDocuments(patientId: string | null) {
+  return useQuery({
+    queryKey: ['patient-documents', patientId],
+    queryFn: () => apiFetch<PatientDocumentOut[]>(`/patients/${patientId}/documents`),
     enabled: !!patientId,
   });
 }

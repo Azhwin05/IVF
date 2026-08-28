@@ -6,14 +6,58 @@ import { CASH_BOOK, GST_SUMMARY, PROFIT_LOSS, LEDGER_ACCOUNTS } from '@/lib/data
 import { cn, formatINR } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Tabs, InfoNote } from '@/components/ui/primitives';
 import { BarChart } from '@/components/ui/charts';
+import { useCashBook, useLedgerAccounts, useProfitLoss } from '@/lib/api/accounting';
 import { Wallet, Receipt, TrendingUp, TrendingDown, Download, FileSpreadsheet, ScrollText } from 'lucide-react';
+
+function monthRange() {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) };
+}
 
 export function Accounting() {
   const { toast } = useApp();
   const [tab, setTab] = useState('cashbook');
+  const { from, to } = monthRange();
 
-  const totalRevenue = PROFIT_LOSS.revenue.reduce((s, r) => s + r.value, 0);
-  const totalExpenses = PROFIT_LOSS.expenses.reduce((s, e) => s + e.value, 0);
+  const cashBookQuery = useCashBook(from, to);
+  const ledgerQuery = useLedgerAccounts();
+  const profitLossQuery = useProfitLoss(from, to);
+
+  const hasRealCashBook = (cashBookQuery.data ?? []).length > 0;
+  const hasRealLedger = (ledgerQuery.data ?? []).length > 0;
+  const hasRealPnL = !!profitLossQuery.data && Object.keys(profitLossQuery.data.revenue).length > 0;
+
+  const cashBook = hasRealCashBook
+    ? (() => {
+        let running = 0;
+        return [...(cashBookQuery.data ?? [])].reverse().map((c) => {
+          running += c.amount_paise;
+          return {
+            date: new Date(c.entry_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+            particulars: c.particulars,
+            type: c.entry_type === 'receipt' ? 'Receipt' : 'Payment',
+            mode: c.mode,
+            amount: Math.round(c.amount_paise / 100),
+            balance: Math.round(running / 100),
+          };
+        }).reverse();
+      })()
+    : CASH_BOOK;
+
+  const ledger = hasRealLedger
+    ? (ledgerQuery.data ?? []).map((a) => ({ name: a.name, debit: Math.round(a.debit_paise / 100), credit: Math.round(a.credit_paise / 100), balance: Math.round(a.balance_paise / 100) }))
+    : LEDGER_ACCOUNTS;
+
+  const revenueBreakdown = hasRealPnL
+    ? Object.entries(profitLossQuery.data!.revenue).map(([label, paise]) => ({ label: label.replace(/_/g, ' '), value: Math.round(paise / 100) }))
+    : PROFIT_LOSS.revenue;
+  const expenseBreakdown = hasRealPnL
+    ? Object.entries(profitLossQuery.data!.expenses).map(([label, paise]) => ({ label: label.replace(/_/g, ' '), value: Math.round(paise / 100) }))
+    : PROFIT_LOSS.expenses;
+
+  const totalRevenue = revenueBreakdown.reduce((s, r) => s + r.value, 0);
+  const totalExpenses = expenseBreakdown.reduce((s, e) => s + e.value, 0);
   const netProfit = totalRevenue - totalExpenses;
 
   return (
@@ -75,7 +119,7 @@ export function Accounting() {
               ))}
             </div>
             <div className="stagger">
-              {CASH_BOOK.map((c, i) => (
+              {cashBook.map((c, i) => (
                 <div
                   key={i}
                   style={{ ['--i' as string]: i }}
@@ -110,7 +154,7 @@ export function Accounting() {
               ))}
             </div>
             <div className="stagger">
-              {LEDGER_ACCOUNTS.map((a, i) => (
+              {ledger.map((a, i) => (
                 <div
                   key={a.name}
                   style={{ ['--i' as string]: i }}
@@ -132,7 +176,7 @@ export function Accounting() {
           <div className="animate-fade-up grid gap-6 p-5 lg:grid-cols-2">
             <div>
               <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-brand-700">Revenue</p>
-              {PROFIT_LOSS.revenue.map((r) => (
+              {revenueBreakdown.map((r) => (
                 <div key={r.label} className="flex items-center justify-between border-b border-ink-100 py-2.5 last:border-0">
                   <span className="text-[12.5px] text-ink-600">{r.label}</span>
                   <span className="tnum text-[13px] font-medium text-ink-900">{formatINR(r.value)}</span>
@@ -143,12 +187,12 @@ export function Accounting() {
                 <span className="tnum text-[14px] font-bold text-brand-700">{formatINR(totalRevenue)}</span>
               </div>
               <div className="mt-4">
-                <BarChart data={PROFIT_LOSS.revenue.map((r) => ({ label: r.label.split(' ')[0], value: Math.round(r.value / 1000) }))} height={140} suffix="K" />
+                <BarChart data={revenueBreakdown.map((r) => ({ label: r.label.split(' ')[0], value: Math.round(r.value / 1000) }))} height={140} suffix="K" />
               </div>
             </div>
             <div>
               <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-rose-600">Expenses</p>
-              {PROFIT_LOSS.expenses.map((e) => (
+              {expenseBreakdown.map((e) => (
                 <div key={e.label} className="flex items-center justify-between border-b border-ink-100 py-2.5 last:border-0">
                   <span className="text-[12.5px] text-ink-600">{e.label}</span>
                   <span className="tnum text-[13px] font-medium text-ink-900">{formatINR(e.value)}</span>
@@ -159,7 +203,7 @@ export function Accounting() {
                 <span className="tnum text-[14px] font-bold text-rose-600">{formatINR(totalExpenses)}</span>
               </div>
               <div className="mt-4">
-                <BarChart data={PROFIT_LOSS.expenses.map((e) => ({ label: e.label.split(' ')[0], value: Math.round(e.value / 1000) }))} height={140} color="#E11D48" suffix="K" />
+                <BarChart data={expenseBreakdown.map((e) => ({ label: e.label.split(' ')[0], value: Math.round(e.value / 1000) }))} height={140} color="#E11D48" suffix="K" />
               </div>
             </div>
           </div>

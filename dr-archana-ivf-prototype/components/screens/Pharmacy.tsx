@@ -3,9 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import { PHARMACY_ITEMS, PHARMACY_SALES, PHARMACY_METRICS } from '@/lib/data';
-import { cn, formatINR, TONE } from '@/lib/utils';
+import { cn, formatINR, TONE, initialsOf } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Input, ProgressBar, Tabs } from '@/components/ui/primitives';
 import { useCountUp } from '@/lib/hooks';
+import { useMedicines, usePharmacySales } from '@/lib/api/pharmacy';
+import { usePatients } from '@/lib/api/patients';
 import { Pill, Search, IndianRupee, AlertTriangle, CalendarX2, Package, Plus, Receipt } from 'lucide-react';
 
 function Metric({ label, value, icon: Icon, tone, currency }: { label: string; value: number; icon: any; tone: string; currency?: boolean }) {
@@ -28,11 +30,62 @@ export function Pharmacy() {
   const [tab, setTab] = useState('stock');
   const [q, setQ] = useState('');
 
+  const medicinesQuery = useMedicines();
+  const salesQuery = usePharmacySales();
+  const patientsQuery = usePatients();
+  const hasRealMedicines = (medicinesQuery.data ?? []).length > 0;
+
+  const medicineNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const m of medicinesQuery.data ?? []) map[m.id] = m.brand_name ?? m.generic_name;
+    return map;
+  }, [medicinesQuery.data]);
+
+  const patientNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of patientsQuery.data ?? []) map[p.id] = p.full_name;
+    return map;
+  }, [patientsQuery.data]);
+
+  const realMedicines = useMemo(
+    () =>
+      (medicinesQuery.data ?? []).map((m) => ({
+        id: m.id,
+        name: m.brand_name ?? m.generic_name,
+        category: m.category ?? 'Uncategorised',
+        stock: m.total_available,
+        reorderLevel: m.reorder_level,
+        unit: m.unit,
+        batch: null as string | null,
+        expiry: null as string | null,
+        mrp: null as number | null,
+        gst: null as number | null,
+      })),
+    [medicinesQuery.data]
+  );
+
+  const realSales = useMemo(
+    () =>
+      (salesQuery.data ?? []).map((s) => ({
+        id: s.bill_number,
+        patient: patientNameById[s.patient_id] ?? 'Unknown patient',
+        date: '',
+        items: s.lines.map((l) => `${medicineNameById[l.medicine_id] ?? 'Medicine'} × ${l.quantity}`).join(', '),
+        amount: Math.round(s.total_amount_paise / 100),
+        status: s.status,
+        tone: 'completed' as const,
+      })),
+    [salesQuery.data, patientNameById, medicineNameById]
+  );
+
   const items = useMemo(() => {
-    if (!q.trim()) return PHARMACY_ITEMS;
+    const base = hasRealMedicines ? realMedicines : PHARMACY_ITEMS;
+    if (!q.trim()) return base;
     const t = q.toLowerCase();
-    return PHARMACY_ITEMS.filter((i) => i.name.toLowerCase().includes(t) || i.category.toLowerCase().includes(t));
-  }, [q]);
+    return base.filter((i) => i.name.toLowerCase().includes(t) || i.category.toLowerCase().includes(t));
+  }, [q, hasRealMedicines, realMedicines]);
+
+  const sales = hasRealMedicines && salesQuery.data ? realSales : PHARMACY_SALES;
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
@@ -52,18 +105,29 @@ export function Pharmacy() {
       />
 
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
-        <Metric label="Today's Sales" value={PHARMACY_METRICS.todaySales} icon={IndianRupee} tone="bg-emerald-50 text-emerald-700 ring-emerald-600/12" currency />
-        <Metric label="Below Reorder Level" value={PHARMACY_METRICS.itemsBelowReorder} icon={AlertTriangle} tone="bg-amber-50 text-amber-700 ring-amber-600/12" />
-        <Metric label="Expiring in 90 Days" value={PHARMACY_METRICS.expiringWithin90Days} icon={CalendarX2} tone="bg-rose-50 text-rose-700 ring-rose-600/12" />
-        <Metric label="Total SKUs" value={PHARMACY_METRICS.totalSKUs} icon={Package} tone="bg-sky-50 text-sky-700 ring-sky-600/12" />
+        {hasRealMedicines ? (
+          <>
+            <Metric label="Today's Sales" value={Math.round((salesQuery.data ?? []).reduce((s, sale) => s + sale.total_amount_paise, 0) / 100)} icon={IndianRupee} tone="bg-emerald-50 text-emerald-700 ring-emerald-600/12" currency />
+            <Metric label="Below Reorder Level" value={realMedicines.filter((m) => m.stock < m.reorderLevel).length} icon={AlertTriangle} tone="bg-amber-50 text-amber-700 ring-amber-600/12" />
+            <Metric label="Total Sales" value={(salesQuery.data ?? []).length} icon={CalendarX2} tone="bg-rose-50 text-rose-700 ring-rose-600/12" />
+            <Metric label="Total SKUs" value={realMedicines.length} icon={Package} tone="bg-sky-50 text-sky-700 ring-sky-600/12" />
+          </>
+        ) : (
+          <>
+            <Metric label="Today's Sales" value={PHARMACY_METRICS.todaySales} icon={IndianRupee} tone="bg-emerald-50 text-emerald-700 ring-emerald-600/12" currency />
+            <Metric label="Below Reorder Level" value={PHARMACY_METRICS.itemsBelowReorder} icon={AlertTriangle} tone="bg-amber-50 text-amber-700 ring-amber-600/12" />
+            <Metric label="Expiring in 90 Days" value={PHARMACY_METRICS.expiringWithin90Days} icon={CalendarX2} tone="bg-rose-50 text-rose-700 ring-rose-600/12" />
+            <Metric label="Total SKUs" value={PHARMACY_METRICS.totalSKUs} icon={Package} tone="bg-sky-50 text-sky-700 ring-sky-600/12" />
+          </>
+        )}
       </div>
 
       <Card className="overflow-hidden">
         <div className="px-4 pt-2">
           <Tabs
             tabs={[
-              { id: 'stock', label: 'Medicine Stock', count: PHARMACY_ITEMS.length },
-              { id: 'sales', label: 'Recent Dispensing', count: PHARMACY_SALES.length },
+              { id: 'stock', label: 'Medicine Stock', count: items.length },
+              { id: 'sales', label: 'Recent Dispensing', count: sales.length },
             ]}
             active={tab}
             onChange={setTab}
@@ -104,16 +168,22 @@ export function Pharmacy() {
                       <ProgressBar value={pct} tone={low ? 'amber' : 'brand'} height={5} />
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-ink-100 pt-2.5 text-[11px]">
-                      <span className="text-ink-400">Batch</span>
-                      <span className="tnum text-right text-ink-700">{m.batch}</span>
-                      <span className="text-ink-400">Expiry</span>
-                      <span className="tnum text-right text-ink-700">{m.expiry}</span>
-                      <span className="text-ink-400">MRP</span>
-                      <span className="tnum text-right font-semibold text-ink-900">₹{m.mrp.toLocaleString('en-IN')}</span>
-                      <span className="text-ink-400">GST</span>
-                      <span className="tnum text-right text-ink-700">{m.gst}%</span>
-                    </div>
+                    {m.mrp !== null ? (
+                      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-ink-100 pt-2.5 text-[11px]">
+                        <span className="text-ink-400">Batch</span>
+                        <span className="tnum text-right text-ink-700">{m.batch}</span>
+                        <span className="text-ink-400">Expiry</span>
+                        <span className="tnum text-right text-ink-700">{m.expiry}</span>
+                        <span className="text-ink-400">MRP</span>
+                        <span className="tnum text-right font-semibold text-ink-900">₹{m.mrp.toLocaleString('en-IN')}</span>
+                        <span className="text-ink-400">GST</span>
+                        <span className="tnum text-right text-ink-700">{m.gst}%</span>
+                      </div>
+                    ) : (
+                      <p className="mt-3 border-t border-ink-100 pt-2.5 text-[11px] text-ink-400">
+                        Batch-level pricing not available from this endpoint yet.
+                      </p>
+                    )}
                   </Card>
                 );
               })}
@@ -123,7 +193,7 @@ export function Pharmacy() {
 
         {tab === 'sales' && (
           <div className="animate-fade-up stagger p-5">
-            {PHARMACY_SALES.map((s, i) => (
+            {sales.map((s, i) => (
               <div key={s.id} style={{ ['--i' as string]: i }} className="flex flex-wrap items-center gap-4 border-b border-ink-100 py-3.5 last:border-0">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink-100 text-ink-600">
                   <Receipt className="h-4 w-4" />

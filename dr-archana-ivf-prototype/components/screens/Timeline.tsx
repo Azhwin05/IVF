@@ -1,19 +1,59 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp, type ScreenId } from '@/lib/store';
 import { TIMELINE, PATIENT } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Card, Badge, Button, SectionTitle, Field } from '@/components/ui/primitives';
+import { usePatientTimeline, type TimelineEventType } from '@/lib/api/clinical';
 import { PatientHeader } from './Workspace';
 import { Check, ChevronDown, ArrowRight, Circle, Loader2 } from 'lucide-react';
 
+const EVENT_TYPE_LABEL: Record<TimelineEventType, string> = {
+  consultation: 'Consultation',
+  investigation: 'Investigation',
+  stimulation_start: 'Stimulation Started',
+  monitoring_visit: 'Monitoring Visit',
+  trigger: 'Trigger',
+  retrieval: 'Oocyte Retrieval',
+  embryology_update: 'Embryology Update',
+  embryo_transfer: 'Embryo Transfer',
+  pregnancy_milestone: 'Pregnancy Milestone',
+  billing: 'Billing',
+  document: 'Document',
+};
+const EVENT_TYPE_LINK: Partial<Record<TimelineEventType, ScreenId>> = {
+  investigation: 'laboratory',
+  monitoring_visit: 'monitoring',
+  embryology_update: 'embryology',
+  embryo_transfer: 'transfer',
+  pregnancy_milestone: 'pregnancy',
+  billing: 'billing',
+};
+
 export function Timeline() {
-  const { go } = useApp();
+  const { go, selectedPatientId } = useApp();
   const [open, setOpen] = useState<string | null>('ts-4');
 
-  const completed = TIMELINE.filter((t) => t.status === 'completed').length;
-  const pct = Math.round(((completed + 0.5) / TIMELINE.length) * 100);
+  const timelineQuery = usePatientTimeline(selectedPatientId);
+  const hasRealData = (timelineQuery.data ?? []).length > 0;
+
+  const realStages = useMemo(() => {
+    const events = [...(timelineQuery.data ?? [])].sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime());
+    return events.map((e, i) => ({
+      id: e.id,
+      title: e.title,
+      date: new Date(e.occurred_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+      status: (i === events.length - 1 ? 'active' : 'completed') as 'completed' | 'active' | 'upcoming',
+      summary: e.summary ?? EVENT_TYPE_LABEL[e.event_type],
+      details: [{ label: 'Type', value: EVENT_TYPE_LABEL[e.event_type] }],
+      link: EVENT_TYPE_LINK[e.event_type],
+    }));
+  }, [timelineQuery.data]);
+
+  const stages = hasRealData ? realStages : TIMELINE;
+  const completed = stages.filter((t) => t.status === 'completed').length;
+  const pct = Math.round(((completed + 0.5) / stages.length) * 100);
 
   return (
     <div className="screen-enter mx-auto max-w-[1100px] space-y-5 p-4 sm:p-6 lg:p-8">
@@ -31,12 +71,14 @@ export function Timeline() {
           <div className="min-w-0">
             <p className="text-[12.5px] text-ink-500">Journey progress</p>
             <p className="tnum tracking-display text-[20px] font-semibold text-ink-900 sm:text-[22px]">
-              {completed} of {TIMELINE.length} stages complete
+              {completed} of {stages.length} stages complete
             </p>
           </div>
-          <Badge tone="active" wrap className="self-start sm:self-auto sm:max-w-[280px]">
-            Currently: {PATIENT.phase} — Day {PATIENT.cycleDay}
-          </Badge>
+          {!hasRealData && (
+            <Badge tone="active" wrap className="self-start sm:self-auto sm:max-w-[280px]">
+              Currently: {PATIENT.phase} — Day {PATIENT.cycleDay}
+            </Badge>
+          )}
         </div>
         <div className="relative h-2 overflow-hidden rounded-full bg-ink-100">
           <div
@@ -66,7 +108,7 @@ export function Timeline() {
         />
 
         <div className="stagger space-y-3">
-          {TIMELINE.map((s, i) => {
+          {stages.map((s, i) => {
             const isOpen = open === s.id;
             const done = s.status === 'completed';
             const active = s.status === 'active';

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -24,8 +25,11 @@ class LabOrderOut(BaseModel):
     id: uuid.UUID
     order_number: str
     patient_id: uuid.UUID
+    ordered_by_id: uuid.UUID
     test_name: str
+    sample_type: str | None
     source: LabOrderSource
     external_lab_name: str | None
     priority: LabOrderPriority
     status: LabOrderStatus
+    created_at: datetime

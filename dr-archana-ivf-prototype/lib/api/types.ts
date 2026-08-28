@@ -82,6 +82,16 @@ export interface CoupleOut {
   infertility_duration: string | null;
 }
 
+export interface PatientDocumentOut {
+  id: string;
+  document_type: string;
+  original_filename: string;
+  content_type: string;
+  size_bytes: number;
+  signed: boolean;
+  created_at: string;
+}
+
 // ---- appointments -------------------------------------------------------
 
 export type AppointmentStatus =
@@ -129,4 +139,19 @@ export interface DashboardMetrics {
 export interface CycleDistributionRow {
   stage: string;
   count: number;
+}
+
+export interface OutcomeRow {
+  outcome: string;
+  count: number;
+}
+
+export interface RevenueTrendRow {
+  month: string;
+  revenue_paise: number;
+}
+
+export interface DoctorPerformanceRow {
+  doctor_id: string;
+  consultations: number;
 }

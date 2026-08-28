@@ -38,6 +38,15 @@ async def get_patient_timeline(session: AsyncSession, patient_id: uuid.UUID) -> 
     return list(result.scalars().all())
 
 
+async def list_consultations(session: AsyncSession, patient_id: uuid.UUID) -> list[Consultation]:
+    result = await session.execute(
+        select(Consultation)
+        .where(Consultation.patient_id == patient_id)
+        .order_by(Consultation.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
 async def create_consultation(
     session: AsyncSession, data: ConsultationCreate, *, actor_id: uuid.UUID, actor_role: str
 ) -> Consultation:

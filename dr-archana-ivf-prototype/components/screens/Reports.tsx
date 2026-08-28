@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '@/lib/store';
 import {
   REVENUE_TREND,
@@ -14,7 +14,24 @@ import { cn } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle } from '@/components/ui/primitives';
 import { AreaChart, BarChart, DonutChart, ProgressRing } from '@/components/ui/charts';
 import { useCountUp } from '@/lib/hooks';
+import { useCycleDistribution, useDoctorPerformance, useOutcomes, useRevenueTrend } from '@/lib/api/reports';
+import { useDoctors } from '@/lib/api/users';
 import { BarChart3, Download, TrendingUp, TrendingDown, Activity, IndianRupee, Users2, Stethoscope } from 'lucide-react';
+
+const OUTCOME_LABEL: Record<string, string> = {
+  clinical_pregnancy: 'Clinical Pregnancy',
+  biochemical: 'Biochemical Only',
+  not_pregnant: 'Not Pregnant',
+  live_birth: 'Live Birth',
+  miscarriage: 'Miscarriage',
+};
+const OUTCOME_COLOR: Record<string, string> = {
+  clinical_pregnancy: '#10B981',
+  biochemical: '#F59E0B',
+  not_pregnant: '#D6D3D1',
+  live_birth: '#059669',
+  miscarriage: '#EF4444',
+};
 
 function KpiTile({ k, i }: { k: (typeof MANAGEMENT_KPIS)[number]; i: number }) {
   const v = useCountUp(k.value, 1200);
@@ -40,9 +57,63 @@ function KpiTile({ k, i }: { k: (typeof MANAGEMENT_KPIS)[number]; i: number }) {
   );
 }
 
+function monthRangeYearAgo() {
+  const now = new Date();
+  const from = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) };
+}
+
 export function Reports() {
   const { toast } = useApp();
   const [range, setRange] = useState('6 months');
+  const { from, to } = monthRangeYearAgo();
+
+  const cycleDistQuery = useCycleDistribution();
+  const outcomesQuery = useOutcomes(from, to);
+  const revenueQuery = useRevenueTrend(6);
+  const doctorPerfQuery = useDoctorPerformance();
+  const doctorsQuery = useDoctors();
+
+  const hasRealRevenue = (revenueQuery.data ?? []).length > 0;
+  const hasRealOutcomes = (outcomesQuery.data ?? []).length > 0;
+  const hasRealCycles = (cycleDistQuery.data ?? []).length > 0;
+  const hasRealDoctorPerf = (doctorPerfQuery.data ?? []).length > 0;
+
+  const doctorNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const d of doctorsQuery.data ?? []) map[d.id] = d.full_name;
+    return map;
+  }, [doctorsQuery.data]);
+
+  const revenueTrend = hasRealRevenue
+    ? (revenueQuery.data ?? []).map((r) => ({ month: r.month, revenue: Math.round(r.revenue_paise / 100 / 100000 * 10) / 10, cycles: 0 }))
+    : REVENUE_TREND;
+
+  const totalOutcomes = (outcomesQuery.data ?? []).reduce((s, o) => s + o.count, 0);
+  const outcomeBreakdown = hasRealOutcomes
+    ? (outcomesQuery.data ?? []).map((o) => ({
+        label: OUTCOME_LABEL[o.outcome] ?? o.outcome,
+        value: totalOutcomes > 0 ? Math.round((o.count / totalOutcomes) * 100) : 0,
+        color: OUTCOME_COLOR[o.outcome] ?? '#94A3B8',
+      }))
+    : OUTCOME_BREAKDOWN;
+  const clinicalPregnancyPct = hasRealOutcomes
+    ? outcomeBreakdown.find((o) => o.label === 'Clinical Pregnancy')?.value ?? 0
+    : 62;
+
+  const cycleDistribution = hasRealCycles
+    ? (cycleDistQuery.data ?? []).map((c) => ({ stage: c.stage.replace(/_/g, ' '), count: c.count, color: '#059669' }))
+    : CYCLE_DISTRIBUTION;
+
+  const doctorPerformance = hasRealDoctorPerf
+    ? (doctorPerfQuery.data ?? []).map((d) => ({
+        name: doctorNameById[d.doctor_id] ?? 'Unknown doctor',
+        consultations: d.consultations,
+        cycles: null as number | null,
+        transfers: null as number | null,
+        success: null as number | null,
+      }))
+    : DOCTOR_PERFORMANCE.map((d) => ({ ...d, cycles: d.cycles as number | null, transfers: d.transfers as number | null, success: d.success as number | null }));
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
@@ -89,12 +160,12 @@ export function Reports() {
           <CardHeader
             icon={<IndianRupee className="h-4 w-4" />}
             title="Revenue Trend"
-            subtitle="Monthly collections in lakhs — last 6 months"
-            action={<Badge tone="completed">+12.4% MoM</Badge>}
+            subtitle={hasRealRevenue ? 'Monthly collections in lakhs — last 6 months' : 'Monthly collections in lakhs — last 6 months'}
+            action={!hasRealRevenue ? <Badge tone="completed">+12.4% MoM</Badge> : undefined}
           />
           <div className="px-5 pb-5">
             <AreaChart
-              data={REVENUE_TREND.map((r) => ({ label: r.month, value: r.revenue }))}
+              data={revenueTrend.map((r) => ({ label: r.month, value: r.revenue }))}
               valueLabel=" L"
               height={240}
             />
@@ -102,12 +173,12 @@ export function Reports() {
         </Card>
 
         <Card>
-          <CardHeader icon={<Activity className="h-4 w-4" />} title="Treatment Outcomes" subtitle="Cycles reaching outcome this quarter" />
+          <CardHeader icon={<Activity className="h-4 w-4" />} title="Treatment Outcomes" subtitle={hasRealOutcomes ? 'Cycles reaching outcome in the last 12 months' : 'Cycles reaching outcome this quarter'} />
           <div className="px-5 pb-5">
             <DonutChart
-              data={OUTCOME_BREAKDOWN}
+              data={outcomeBreakdown}
               centerLabel="Clinical pregnancy"
-              centerValue="62%"
+              centerValue={`${clinicalPregnancyPct}%`}
               size={168}
             />
           </div>
@@ -128,10 +199,10 @@ export function Reports() {
         </Card>
 
         <Card>
-          <CardHeader icon={<Users2 className="h-4 w-4" />} title="Active Cycle Pipeline" subtitle="Where the 12 live cycles sit today" />
+          <CardHeader icon={<Users2 className="h-4 w-4" />} title="Active Cycle Pipeline" subtitle={hasRealCycles ? `Where the ${cycleDistribution.reduce((s, c) => s + c.count, 0)} live cycles sit today` : 'Where the 12 live cycles sit today'} />
           <div className="px-5 pb-5">
             <DonutChart
-              data={CYCLE_DISTRIBUTION.map((c) => ({ label: c.stage, value: c.count, color: c.color }))}
+              data={cycleDistribution.map((c) => ({ label: c.stage, value: c.count, color: c.color }))}
               centerLabel="Active cycles"
               size={168}
             />
@@ -180,7 +251,7 @@ export function Reports() {
               ))}
             </div>
             <div className="stagger">
-              {DOCTOR_PERFORMANCE.map((d, i) => (
+              {doctorPerformance.map((d, i) => (
                 <div
                   key={d.name}
                   style={{ ['--i' as string]: i }}
@@ -192,21 +263,25 @@ export function Reports() {
                       {d.consultations} consults
                     </span>
                     <span className="tnum text-[11.5px] text-ink-500 md:text-[13px] md:text-ink-700">
-                      {d.cycles} cycles
+                      {d.cycles !== null ? `${d.cycles} cycles` : '—'}
                     </span>
                     <span className="tnum text-[11.5px] text-ink-500 md:text-[13px] md:text-ink-700">
-                      {d.transfers} transfers
+                      {d.transfers !== null ? `${d.transfers} transfers` : '—'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-100">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-[width] duration-[1200ms] ease-spring"
-                        style={{ width: `${d.success}%`, transitionDelay: `${i * 120}ms` }}
-                      />
+                  {d.success !== null ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-100">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-[width] duration-[1200ms] ease-spring"
+                          style={{ width: `${d.success}%`, transitionDelay: `${i * 120}ms` }}
+                        />
+                      </div>
+                      <span className="tnum text-[12px] font-semibold text-ink-900">{d.success}%</span>
                     </div>
-                    <span className="tnum text-[12px] font-semibold text-ink-900">{d.success}%</span>
-                  </div>
+                  ) : (
+                    <span className="text-[11.5px] text-ink-400">Not available yet</span>
+                  )}
                 </div>
               ))}
             </div>

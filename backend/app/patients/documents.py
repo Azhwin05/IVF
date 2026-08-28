@@ -6,6 +6,7 @@ stays about patient CRUD, this file is about the MinIO round-trip).
 import uuid
 
 from fastapi import APIRouter, Depends, File, UploadFile
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_audit_event
@@ -20,10 +21,25 @@ from app.integrations.storage import (
     validate_upload,
 )
 from app.patients.models import PatientDocument
+from app.patients.schemas import PatientDocumentOut
 from app.users.models import User
 
 router = APIRouter(prefix="/patients", tags=["patient-documents"])
 settings = get_settings()
+
+
+@router.get("/{patient_id}/documents", response_model=list[PatientDocumentOut])
+async def list_documents(
+    patient_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("patients.read")),
+) -> list[PatientDocument]:
+    result = await session.execute(
+        select(PatientDocument)
+        .where(PatientDocument.patient_id == patient_id)
+        .order_by(PatientDocument.created_at.desc())
+    )
+    return list(result.scalars().all())
 
 
 @router.post("/{patient_id}/documents", status_code=201)

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '@/lib/store';
 import {
   PATIENT,
@@ -11,8 +11,13 @@ import {
   MEDICATIONS,
   PACKAGE,
   TIMELINE,
+  type StatusTone,
 } from '@/lib/data';
-import { usePatientSummary, useCoupleForPatient } from '@/lib/api/patients';
+import { usePatientSummary, useCoupleForPatient, usePatientDocuments } from '@/lib/api/patients';
+import { usePatientConsultations } from '@/lib/api/clinical';
+import { useLabOrders, type LabOrderStatus } from '@/lib/api/laboratory';
+import { useActiveCycle } from '@/lib/api/ivf';
+import { useInvoices } from '@/lib/api/billing';
 import { cn, TONE, formatINR, ageFromDOB, initialsOf } from '@/lib/utils';
 import {
   Card,
@@ -52,16 +57,30 @@ import {
   Download,
 } from 'lucide-react';
 
-const TABS = [
-  { id: 'summary', label: 'Clinical Summary' },
-  { id: 'timeline', label: 'Timeline' },
-  { id: 'consultations', label: 'Consultations', count: CONSULTATIONS.length },
-  { id: 'investigations', label: 'Investigations', count: INVESTIGATIONS.length },
-  { id: 'cycle', label: 'IVF Cycle' },
-  { id: 'prescriptions', label: 'Prescriptions', count: MEDICATIONS.length },
-  { id: 'documents', label: 'Documents' },
-  { id: 'billing', label: 'Billing' },
+const STATIC_DOCUMENTS = [
+  { name: 'IVF Treatment Consent', date: '12 Jul 2026', size: '284 KB', signed: true },
+  { name: 'ICSI Procedure Consent', date: '12 Jul 2026', size: '196 KB', signed: true },
+  { name: 'Cryopreservation Consent', date: '3 Aug 2026', size: '212 KB', signed: true },
+  { name: 'Baseline Ultrasound Report', date: '22 Jul 2026', size: '1.2 MB', signed: false },
+  { name: 'Hormonal Profile — Lab', date: '6 Jul 2026', size: '486 KB', signed: false },
+  { name: 'Semen Analysis Report', date: '9 Jul 2026', size: '318 KB', signed: false },
 ];
+
+const LAB_STATUS_LABEL: Record<LabOrderStatus, string> = {
+  ordered: 'Ordered',
+  sample_collected: 'Sample Collected',
+  in_progress: 'In Progress',
+  report_ready: 'Report Ready',
+  delivered: 'Delivered',
+};
+const LAB_STATUS_TONE: Record<LabOrderStatus, keyof typeof TONE> = {
+  ordered: 'scheduled',
+  sample_collected: 'attention',
+  in_progress: 'active',
+  report_ready: 'completed',
+  delivered: 'neutral',
+};
+
 
 /* ============================================================
    PATIENT HEADER — used across clinical screens (Workspace,
@@ -186,9 +205,84 @@ export function PatientHeader({ compact }: { compact?: boolean }) {
    WORKSPACE
    ============================================================ */
 export function Workspace() {
-  const { go, toast } = useApp();
+  const { go, toast, selectedPatientId } = useApp();
   const [tab, setTab] = useState('summary');
   const latest = MONITORING_HISTORY[MONITORING_HISTORY.length - 1];
+
+  const coupleQuery = useCoupleForPatient(selectedPatientId);
+  const consultationsQuery = usePatientConsultations(selectedPatientId);
+  const labOrdersQuery = useLabOrders();
+  const activeCycleQuery = useActiveCycle(coupleQuery.data?.id ?? null);
+  const documentsQuery = usePatientDocuments(selectedPatientId);
+  const invoicesQuery = useInvoices(selectedPatientId);
+
+  const hasRealConsultations = (consultationsQuery.data ?? []).length > 0;
+  const realConsultations = useMemo(
+    () =>
+      (consultationsQuery.data ?? []).map((c) => ({
+        type: c.consultation_type,
+        date: new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+        doctor: 'Consultant',
+        note: c.notes,
+      })),
+    [consultationsQuery.data]
+  );
+  const consultations = hasRealConsultations ? realConsultations : CONSULTATIONS;
+
+  const patientLabOrders = useMemo(
+    () => (labOrdersQuery.data ?? []).filter((o) => o.patient_id === selectedPatientId),
+    [labOrdersQuery.data, selectedPatientId]
+  );
+  const hasRealInvestigations = patientLabOrders.length > 0;
+  const realInvestigations = useMemo(
+    () =>
+      patientLabOrders.map((o) => ({
+        name: o.test_name,
+        status: LAB_STATUS_LABEL[o.status],
+        tone: LAB_STATUS_TONE[o.status],
+        sampleType: o.sample_type ?? '—',
+        date: new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+      })),
+    [patientLabOrders]
+  );
+
+  const realMedications = activeCycleQuery.data?.treatment_plans?.[0]?.medication_plan ?? null;
+  const hasRealMedications = !!realMedications && realMedications.length > 0;
+  const medications = hasRealMedications
+    ? realMedications!.map((m) => ({ name: m.name, dose: m.dose, route: m.route, since: '—', status: m.status, tone: (m.status === 'active' ? 'active' : 'completed') as StatusTone }))
+    : MEDICATIONS;
+
+  const hasRealDocuments = (documentsQuery.data ?? []).length > 0;
+  const documents = hasRealDocuments
+    ? (documentsQuery.data ?? []).map((d) => ({
+        name: d.original_filename,
+        date: new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+        size: d.size_bytes >= 1_000_000 ? `${(d.size_bytes / 1_000_000).toFixed(1)} MB` : `${Math.round(d.size_bytes / 1000)} KB`,
+        signed: d.signed,
+      }))
+    : STATIC_DOCUMENTS;
+
+  const realInvoices = invoicesQuery.data ?? [];
+  const hasRealBilling = realInvoices.length > 0;
+  const billingTotals = hasRealBilling
+    ? {
+        value: realInvoices.reduce((s, i) => s + i.total_amount_paise, 0) / 100,
+        paid: realInvoices.reduce((s, i) => s + i.paid_amount_paise, 0) / 100,
+        outstanding: realInvoices.reduce((s, i) => s + i.outstanding_paise, 0) / 100,
+      }
+    : { value: PACKAGE.value, paid: PACKAGE.paid, outstanding: PACKAGE.outstanding };
+  const billingCollectedPct = billingTotals.value > 0 ? Math.round((billingTotals.paid / billingTotals.value) * 100) : 0;
+
+  const TABS = [
+    { id: 'summary', label: 'Clinical Summary' },
+    { id: 'timeline', label: 'Timeline' },
+    { id: 'consultations', label: 'Consultations', count: consultations.length },
+    { id: 'investigations', label: 'Investigations', count: hasRealInvestigations ? realInvestigations.length : INVESTIGATIONS.length },
+    { id: 'cycle', label: 'IVF Cycle' },
+    { id: 'prescriptions', label: 'Prescriptions', count: medications.length },
+    { id: 'documents', label: 'Documents' },
+    { id: 'billing', label: 'Billing' },
+  ];
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
@@ -420,7 +514,8 @@ export function Workspace() {
           {/* ---------------- CONSULTATIONS ---------------- */}
           {tab === 'consultations' && (
             <div className="animate-fade-up stagger space-y-3">
-              {CONSULTATIONS.map((c, i) => (
+              {consultations.length === 0 && <p className="px-1 py-8 text-center text-[13px] text-ink-500">No consultations recorded yet.</p>}
+              {consultations.map((c, i) => (
                 <Card key={i} style={{ ['--i' as string]: i }} className="p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
@@ -449,37 +544,70 @@ export function Workspace() {
           {/* ---------------- INVESTIGATIONS ---------------- */}
           {tab === 'investigations' && (
             <div className="animate-fade-up">
-              <Card className="overflow-hidden">
-                <div className="hidden grid-cols-[2fr_1fr_1fr_1fr_100px] gap-4 border-b border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
-                  {['Investigation', 'Result', 'Reference', 'Date', 'Status'].map((h) => (
-                    <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
-                      {h}
-                    </span>
-                  ))}
-                </div>
-                <div className="stagger">
-                  {INVESTIGATIONS.map((iv, i) => (
-                    <div
-                      key={iv.name}
-                      style={{ ['--i' as string]: i }}
-                      className="flex flex-col gap-1.5 border-b border-ink-100 px-4 py-3 last:border-0 hover:bg-ink-50/60 sm:px-5 md:grid md:grid-cols-[2fr_1fr_1fr_1fr_100px] md:items-center md:gap-4"
-                    >
-                      <div className="flex items-center justify-between gap-3 md:contents">
-                        <span className="text-[13px] font-medium text-ink-800">{iv.name}</span>
-                        <Badge tone={iv.flag === 'normal' ? 'completed' : 'attention'} size="sm" className="md:hidden">
+              {hasRealInvestigations ? (
+                <Card className="overflow-hidden">
+                  <div className="hidden grid-cols-[2fr_1fr_1fr_100px] gap-4 border-b border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
+                    {['Investigation', 'Sample Type', 'Date', 'Status'].map((h) => (
+                      <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="stagger">
+                    {realInvestigations.map((iv, i) => (
+                      <div
+                        key={iv.name + i}
+                        style={{ ['--i' as string]: i }}
+                        className="flex flex-col gap-1.5 border-b border-ink-100 px-4 py-3 last:border-0 hover:bg-ink-50/60 sm:px-5 md:grid md:grid-cols-[2fr_1fr_1fr_100px] md:items-center md:gap-4"
+                      >
+                        <div className="flex items-center justify-between gap-3 md:contents">
+                          <span className="text-[13px] font-medium text-ink-800">{iv.name}</span>
+                          <Badge tone={iv.tone} size="sm" className="md:hidden">
+                            {iv.status}
+                          </Badge>
+                        </div>
+                        <span className="text-[12px] text-ink-500">{iv.sampleType}</span>
+                        <span className="text-[12px] text-ink-500">{iv.date}</span>
+                        <Badge tone={iv.tone} size="sm" className="hidden md:inline-flex">
+                          {iv.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ) : (
+                <Card className="overflow-hidden">
+                  <div className="hidden grid-cols-[2fr_1fr_1fr_1fr_100px] gap-4 border-b border-ink-200/70 bg-ink-50/60 px-5 py-2.5 md:grid">
+                    {['Investigation', 'Result', 'Reference', 'Date', 'Status'].map((h) => (
+                      <span key={h} className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-400">
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="stagger">
+                    {INVESTIGATIONS.map((iv, i) => (
+                      <div
+                        key={iv.name}
+                        style={{ ['--i' as string]: i }}
+                        className="flex flex-col gap-1.5 border-b border-ink-100 px-4 py-3 last:border-0 hover:bg-ink-50/60 sm:px-5 md:grid md:grid-cols-[2fr_1fr_1fr_1fr_100px] md:items-center md:gap-4"
+                      >
+                        <div className="flex items-center justify-between gap-3 md:contents">
+                          <span className="text-[13px] font-medium text-ink-800">{iv.name}</span>
+                          <Badge tone={iv.flag === 'normal' ? 'completed' : 'attention'} size="sm" className="md:hidden">
+                            {iv.flag === 'normal' ? 'Normal' : 'Low'}
+                          </Badge>
+                        </div>
+                        <span className="tnum text-[13px] font-semibold text-ink-900">{iv.value}</span>
+                        <span className="tnum text-[12px] text-ink-500">Ref {iv.ref}</span>
+                        <span className="text-[12px] text-ink-500">{iv.date}</span>
+                        <Badge tone={iv.flag === 'normal' ? 'completed' : 'attention'} size="sm" className="hidden md:inline-flex">
                           {iv.flag === 'normal' ? 'Normal' : 'Low'}
                         </Badge>
                       </div>
-                      <span className="tnum text-[13px] font-semibold text-ink-900">{iv.value}</span>
-                      <span className="tnum text-[12px] text-ink-500">Ref {iv.ref}</span>
-                      <span className="text-[12px] text-ink-500">{iv.date}</span>
-                      <Badge tone={iv.flag === 'normal' ? 'completed' : 'attention'} size="sm" className="hidden md:inline-flex">
-                        {iv.flag === 'normal' ? 'Normal' : 'Low'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </div>
           )}
 
@@ -501,7 +629,7 @@ export function Workspace() {
           {/* ---------------- PRESCRIPTIONS ---------------- */}
           {tab === 'prescriptions' && (
             <div className="animate-fade-up stagger space-y-2.5">
-              {MEDICATIONS.map((m, i) => (
+              {medications.map((m, i) => (
                 <Card key={m.name} style={{ ['--i' as string]: i }} className="flex flex-wrap items-center gap-4 p-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
                     <Pill className="h-5 w-5" />
@@ -512,7 +640,7 @@ export function Workspace() {
                     </p>
                     <p className="text-[12px] text-ink-500">{m.route}</p>
                   </div>
-                  <span className="text-[12px] text-ink-500">Since {m.since}</span>
+                  {m.since !== '—' && <span className="text-[12px] text-ink-500">Since {m.since}</span>}
                   <Badge tone={m.tone} size="sm">
                     {m.status}
                   </Badge>
@@ -524,14 +652,10 @@ export function Workspace() {
           {/* ---------------- DOCUMENTS ---------------- */}
           {tab === 'documents' && (
             <div className="animate-fade-up stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                { name: 'IVF Treatment Consent', date: '12 Jul 2026', size: '284 KB', signed: true },
-                { name: 'ICSI Procedure Consent', date: '12 Jul 2026', size: '196 KB', signed: true },
-                { name: 'Cryopreservation Consent', date: '3 Aug 2026', size: '212 KB', signed: true },
-                { name: 'Baseline Ultrasound Report', date: '22 Jul 2026', size: '1.2 MB', signed: false },
-                { name: 'Hormonal Profile — Lab', date: '6 Jul 2026', size: '486 KB', signed: false },
-                { name: 'Semen Analysis Report', date: '9 Jul 2026', size: '318 KB', signed: false },
-              ].map((d, i) => (
+              {documents.length === 0 && (
+                <p className="col-span-full px-1 py-8 text-center text-[13px] text-ink-500">No documents uploaded yet for this patient.</p>
+              )}
+              {documents.map((d, i) => (
                 <Card key={d.name} style={{ ['--i' as string]: i }} interactive className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink-100 text-ink-500">
@@ -556,14 +680,14 @@ export function Workspace() {
             <div className="animate-fade-up space-y-4">
               <div className="grid gap-4 sm:grid-cols-3">
                 {[
-                  { l: 'Package Value', v: PACKAGE.value, tone: 'neutral' as const },
-                  { l: 'Amount Paid', v: PACKAGE.paid, tone: 'completed' as const },
-                  { l: 'Outstanding', v: PACKAGE.outstanding, tone: 'attention' as const },
+                  { l: hasRealBilling ? 'Total Billed' : 'Package Value', v: billingTotals.value, tone: 'neutral' as const },
+                  { l: 'Amount Paid', v: billingTotals.paid, tone: 'completed' as const },
+                  { l: 'Outstanding', v: billingTotals.outstanding, tone: 'attention' as const },
                 ].map((s) => (
                   <Card key={s.l} className="p-4">
                     <p className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-ink-400">{s.l}</p>
                     <p className={cn('tnum mt-1.5 text-[24px] font-semibold', TONE[s.tone].text)}>
-                      {formatINR(s.v)}
+                      {formatINR(Math.round(s.v))}
                     </p>
                   </Card>
                 ))}
@@ -571,9 +695,9 @@ export function Workspace() {
               <Card className="p-4">
                 <div className="mb-2 flex justify-between text-[12.5px]">
                   <span className="text-ink-600">Package utilisation</span>
-                  <span className="tnum font-medium text-ink-900">70% collected</span>
+                  <span className="tnum font-medium text-ink-900">{billingCollectedPct}% collected</span>
                 </div>
-                <ProgressBar value={70} height={8} />
+                <ProgressBar value={billingCollectedPct} height={8} />
               </Card>
               <Button variant="primary" iconRight={<ChevronRight className="h-4 w-4" />} onClick={() => go('billing')}>
                 Open full billing workspace

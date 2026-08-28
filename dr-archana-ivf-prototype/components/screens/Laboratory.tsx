@@ -6,6 +6,9 @@ import { LAB_ORDERS, LAB_METRICS, LAB_TEST_CATALOGUE } from '@/lib/data';
 import { cn, TONE } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Input, InfoNote } from '@/components/ui/primitives';
 import { useCountUp } from '@/lib/hooks';
+import { useLabOrders, type LabOrderStatus } from '@/lib/api/laboratory';
+import { useLabTestCatalogue } from '@/lib/api/administration';
+import { usePatients } from '@/lib/api/patients';
 import {
   FlaskConical,
   Search,
@@ -19,6 +22,27 @@ import {
 } from 'lucide-react';
 
 const FILTERS = ['All', 'Ordered', 'Sample Collected', 'In Progress', 'Report Ready', 'Delivered'];
+const STATUS_MAP: Record<string, LabOrderStatus> = {
+  Ordered: 'ordered',
+  'Sample Collected': 'sample_collected',
+  'In Progress': 'in_progress',
+  'Report Ready': 'report_ready',
+  Delivered: 'delivered',
+};
+const STATUS_LABEL: Record<LabOrderStatus, string> = {
+  ordered: 'Ordered',
+  sample_collected: 'Sample Collected',
+  in_progress: 'In Progress',
+  report_ready: 'Report Ready',
+  delivered: 'Delivered',
+};
+const STATUS_TONE: Record<LabOrderStatus, keyof typeof TONE> = {
+  ordered: 'scheduled',
+  sample_collected: 'attention',
+  in_progress: 'active',
+  report_ready: 'completed',
+  delivered: 'neutral',
+};
 
 function Metric({ label, value, icon: Icon, tone }: { label: string; value: number; icon: any; tone: string }) {
   const v = useCountUp(value, 1000);
@@ -38,15 +62,50 @@ export function Laboratory() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('All');
 
+  const ordersQuery = useLabOrders();
+  const catalogueQuery = useLabTestCatalogue();
+  const patientsQuery = usePatients();
+  const hasRealData = (ordersQuery.data ?? []).length > 0;
+
+  const patientNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of patientsQuery.data ?? []) map[p.id] = p.full_name;
+    return map;
+  }, [patientsQuery.data]);
+
+  const realRows = useMemo(
+    () =>
+      (ordersQuery.data ?? []).map((o) => ({
+        id: o.order_number,
+        test: o.test_name,
+        patient: patientNameById[o.patient_id] ?? 'Unknown patient',
+        patientId: null as string | null,
+        status: STATUS_LABEL[o.status],
+        tone: STATUS_TONE[o.status],
+        priority: o.priority === 'urgent' ? 'Urgent' : 'Routine',
+        source: o.source === 'internal_lab' ? 'Internal Lab' : 'External Lab',
+        orderedBy: 'Clinical staff',
+        orderedOn: new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+        sampleType: o.sample_type ?? '—',
+        externalLab: o.external_lab_name,
+      })),
+    [ordersQuery.data, patientNameById]
+  );
+
+  const catalogue = catalogueQuery.data?.length
+    ? catalogueQuery.data.map((t) => ({ test: t.test_name, price: Math.round(t.price_paise / 100), tat: t.turnaround_time }))
+    : LAB_TEST_CATALOGUE;
+
   const rows = useMemo(() => {
-    let r = LAB_ORDERS;
+    const base = hasRealData ? realRows : LAB_ORDERS.map((o) => ({ ...o, patientId: o.patientId ?? null, externalLab: o.externalLab ?? null }));
+    let r = base;
     if (filter !== 'All') r = r.filter((o) => o.status === filter);
     if (q.trim()) {
       const t = q.toLowerCase();
       r = r.filter((o) => o.patient.toLowerCase().includes(t) || o.test.toLowerCase().includes(t) || o.id.toLowerCase().includes(t));
     }
     return r;
-  }, [q, filter]);
+  }, [q, filter, hasRealData, realRows]);
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
@@ -66,11 +125,23 @@ export function Laboratory() {
       />
 
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 xl:grid-cols-5">
-        <Metric label="Orders Today" value={LAB_METRICS.ordersToday} icon={ClipboardList} tone="bg-brand-50 text-brand-700 ring-brand-600/12" />
-        <Metric label="Awaiting Collection" value={LAB_METRICS.awaitingCollection} icon={Beaker} tone="bg-amber-50 text-amber-700 ring-amber-600/12" />
-        <Metric label="In Progress" value={LAB_METRICS.inProgress} icon={FlaskConical} tone="bg-sky-50 text-sky-700 ring-sky-600/12" />
-        <Metric label="Reports Ready" value={LAB_METRICS.reportsReady} icon={CheckCircle2} tone="bg-emerald-50 text-emerald-700 ring-emerald-600/12" />
-        <Metric label="External Pending" value={LAB_METRICS.externalPending} icon={Building2} tone="bg-violet-50 text-violet-700 ring-violet-600/12" />
+        {hasRealData ? (
+          <>
+            <Metric label="Total Orders" value={realRows.length} icon={ClipboardList} tone="bg-brand-50 text-brand-700 ring-brand-600/12" />
+            <Metric label="Awaiting Collection" value={realRows.filter((o) => o.status === 'Ordered').length} icon={Beaker} tone="bg-amber-50 text-amber-700 ring-amber-600/12" />
+            <Metric label="In Progress" value={realRows.filter((o) => o.status === 'Sample Collected' || o.status === 'In Progress').length} icon={FlaskConical} tone="bg-sky-50 text-sky-700 ring-sky-600/12" />
+            <Metric label="Reports Ready" value={realRows.filter((o) => o.status === 'Report Ready').length} icon={CheckCircle2} tone="bg-emerald-50 text-emerald-700 ring-emerald-600/12" />
+            <Metric label="External" value={realRows.filter((o) => o.source === 'External Lab').length} icon={Building2} tone="bg-violet-50 text-violet-700 ring-violet-600/12" />
+          </>
+        ) : (
+          <>
+            <Metric label="Orders Today" value={LAB_METRICS.ordersToday} icon={ClipboardList} tone="bg-brand-50 text-brand-700 ring-brand-600/12" />
+            <Metric label="Awaiting Collection" value={LAB_METRICS.awaitingCollection} icon={Beaker} tone="bg-amber-50 text-amber-700 ring-amber-600/12" />
+            <Metric label="In Progress" value={LAB_METRICS.inProgress} icon={FlaskConical} tone="bg-sky-50 text-sky-700 ring-sky-600/12" />
+            <Metric label="Reports Ready" value={LAB_METRICS.reportsReady} icon={CheckCircle2} tone="bg-emerald-50 text-emerald-700 ring-emerald-600/12" />
+            <Metric label="External Pending" value={LAB_METRICS.externalPending} icon={Building2} tone="bg-violet-50 text-violet-700 ring-violet-600/12" />
+          </>
+        )}
       </div>
 
       <div className="grid gap-5 xl:grid-cols-3">
@@ -147,7 +218,7 @@ export function Laboratory() {
         <Card>
           <CardHeader icon={<FileText className="h-4 w-4" />} title="Lab Test Catalogue" subtitle="Standard pricing and turnaround time" />
           <div className="stagger px-5 pb-5">
-            {LAB_TEST_CATALOGUE.map((t, i) => (
+            {catalogue.map((t, i) => (
               <div key={t.test} style={{ ['--i' as string]: i }} className="flex items-center justify-between gap-3 border-b border-ink-100 py-2.5 last:border-0">
                 <div className="min-w-0">
                   <p className="truncate text-[12.5px] font-medium text-ink-800">{t.test}</p>

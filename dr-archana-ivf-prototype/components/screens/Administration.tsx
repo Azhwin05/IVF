@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '@/lib/store';
 import { SYSTEM_SETTINGS_GROUPS, PROCEDURE_CHARGES, TREATMENT_PACKAGES, USERS } from '@/lib/data';
 import { cn, formatINR } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Tabs, InfoNote, ActionRow } from '@/components/ui/primitives';
+import { useProcedureCharges, usePackages } from '@/lib/api/administration';
 import {
   Users,
   ClipboardList,
@@ -30,6 +31,27 @@ export function Administration() {
   const { toast } = useApp();
   const [tab, setTab] = useState('settings');
 
+  const chargesQuery = useProcedureCharges();
+  const packagesQuery = usePackages();
+  const hasRealCharges = (chargesQuery.data ?? []).length > 0;
+  const hasRealPackages = (packagesQuery.data ?? []).length > 0;
+
+  const charges = useMemo(
+    () =>
+      hasRealCharges
+        ? (chargesQuery.data ?? []).map((c) => ({ procedure: c.procedure_name, charge: Math.round(c.charge_paise / 100) }))
+        : PROCEDURE_CHARGES,
+    [hasRealCharges, chargesQuery.data]
+  );
+
+  const packages = useMemo(
+    () =>
+      hasRealPackages
+        ? (packagesQuery.data ?? []).map((p) => ({ name: p.name, price: Math.round(p.price_paise / 100), validity: p.validity_description ?? '—', inclusions: null as number | null }))
+        : TREATMENT_PACKAGES.map((p) => ({ ...p, inclusions: p.inclusions as number | null })),
+    [hasRealPackages, packagesQuery.data]
+  );
+
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
       <SectionTitle
@@ -48,8 +70,8 @@ export function Administration() {
           <Tabs
             tabs={[
               { id: 'settings', label: 'Settings' },
-              { id: 'charges', label: 'Procedure Charges', count: PROCEDURE_CHARGES.length },
-              { id: 'packages', label: 'Treatment Packages', count: TREATMENT_PACKAGES.length },
+              { id: 'charges', label: 'Procedure Charges', count: charges.length },
+              { id: 'packages', label: 'Treatment Packages', count: packages.length },
               { id: 'users', label: 'Users & Roles', count: Object.keys(USERS).length },
             ]}
             active={tab}
@@ -83,7 +105,7 @@ export function Administration() {
         {tab === 'charges' && (
           <div className="animate-fade-up p-5">
             <div className="stagger space-y-2">
-              {PROCEDURE_CHARGES.map((c, i) => (
+              {charges.map((c, i) => (
                 <div
                   key={c.procedure}
                   style={{ ['--i' as string]: i }}
@@ -107,19 +129,21 @@ export function Administration() {
 
         {tab === 'packages' && (
           <div className="animate-fade-up stagger grid gap-3.5 p-5 sm:grid-cols-2">
-            {TREATMENT_PACKAGES.map((p, i) => (
+            {packages.map((p, i) => (
               <Card key={p.name} style={{ ['--i' as string]: i }} className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-600/12">
                     <Package className="h-[18px] w-[18px]" />
                   </div>
-                  <Badge tone="neutral" size="sm">
-                    {p.inclusions} inclusions
-                  </Badge>
+                  {p.inclusions !== null && (
+                    <Badge tone="neutral" size="sm">
+                      {p.inclusions} inclusions
+                    </Badge>
+                  )}
                 </div>
                 <p className="mt-3 text-[13.5px] font-semibold text-ink-900">{p.name}</p>
                 <p className="tnum mt-1 text-[22px] font-semibold text-ink-900">{formatINR(p.price)}</p>
-                <p className="mt-1 text-[11.5px] text-ink-500">Valid for {p.validity}</p>
+                <p className="mt-1 text-[11.5px] text-ink-500">{hasRealPackages ? p.validity : `Valid for ${p.validity}`}</p>
               </Card>
             ))}
           </div>

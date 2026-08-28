@@ -24,6 +24,15 @@ async def get_timeline(
     return await service.get_patient_timeline(session, patient_id)
 
 
+@router.get("/patients/{patient_id}/consultations", response_model=list[ConsultationOut])
+async def get_consultations(
+    patient_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("patients.read")),
+) -> list[ConsultationOut]:
+    return await service.list_consultations(session, patient_id)
+
+
 @router.post("/consultations", response_model=ConsultationOut, status_code=201)
 async def create_consultation(
     body: ConsultationCreate,

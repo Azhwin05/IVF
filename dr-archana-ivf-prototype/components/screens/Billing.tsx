@@ -1,12 +1,29 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import { PACKAGE, INVOICES, PATIENT, PARTNER } from '@/lib/data';
 import { cn, formatINR, TONE } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Field, InfoNote, ProgressBar, Avatar } from '@/components/ui/primitives';
 import { useCountUp } from '@/lib/hooks';
+import { useInvoices } from '@/lib/api/billing';
+import { usePatientSummary, useCoupleForPatient } from '@/lib/api/patients';
 import { Receipt, Download, IndianRupee, CreditCard, Check, X, Plus, Percent, FileText } from 'lucide-react';
+
+const INVOICE_STATUS_TONE: Record<string, 'completed' | 'attention'> = {
+  paid: 'completed',
+  partially_paid: 'attention',
+  pending: 'attention',
+  overridden: 'attention',
+  cancelled: 'attention',
+};
+const INVOICE_STATUS_LABEL: Record<string, string> = {
+  paid: 'Paid',
+  partially_paid: 'Partially Paid',
+  pending: 'Pending',
+  overridden: 'Overridden',
+  cancelled: 'Cancelled',
+};
 
 function MoneyTile({ label, value, tone, sub }: { label: string; value: number; tone: 'neutral' | 'completed' | 'attention'; sub: string }) {
   const v = useCountUp(value, 1200);
@@ -22,15 +39,50 @@ function MoneyTile({ label, value, tone, sub }: { label: string; value: number; 
 }
 
 export function Billing() {
-  const { toast } = useApp();
-  const collected = (PACKAGE.paid / PACKAGE.value) * 100;
+  const { toast, selectedPatientId } = useApp();
+  const summaryQuery = usePatientSummary(selectedPatientId);
+  const coupleQuery = useCoupleForPatient(selectedPatientId);
+  const invoicesQuery = useInvoices(selectedPatientId);
+
+  const realInvoices = invoicesQuery.data ?? [];
+  const hasRealData = realInvoices.length > 0;
+
+  const invoices = useMemo(
+    () =>
+      hasRealData
+        ? realInvoices.map((inv) => ({
+            id: inv.invoice_number,
+            date: '—',
+            description: inv.charges[0]?.description ?? `${inv.charges.length} charge${inv.charges.length === 1 ? '' : 's'}`,
+            amount: Math.round(inv.total_amount_paise / 100),
+            method: '—',
+            status: INVOICE_STATUS_LABEL[inv.status] ?? inv.status,
+            tone: INVOICE_STATUS_TONE[inv.status] ?? 'attention',
+          }))
+        : INVOICES.map((i) => ({ ...i, tone: i.status === 'Paid' ? ('completed' as const) : ('attention' as const) })),
+    [hasRealData, realInvoices]
+  );
+
+  const totals = hasRealData
+    ? {
+        value: realInvoices.reduce((s, i) => s + i.total_amount_paise, 0) / 100,
+        paid: realInvoices.reduce((s, i) => s + i.paid_amount_paise, 0) / 100,
+        outstanding: realInvoices.reduce((s, i) => s + i.outstanding_paise, 0) / 100,
+      }
+    : { value: PACKAGE.value, paid: PACKAGE.paid, outstanding: PACKAGE.outstanding };
+
+  const collected = totals.value > 0 ? (totals.paid / totals.value) * 100 : 0;
+  const patientName = summaryQuery.data?.full_name ?? PATIENT.name;
+  const partnerName = coupleQuery.data
+    ? (coupleQuery.data.female_patient.id === selectedPatientId ? coupleQuery.data.male_patient : coupleQuery.data.female_patient).full_name
+    : PARTNER.name;
 
   return (
     <div className="screen-enter mx-auto max-w-[1300px] space-y-5 p-4 sm:p-6 lg:p-8">
       <SectionTitle
         eyebrow="Operations"
         title="Billing & IVF Package"
-        description={`${PATIENT.name} & ${PARTNER.name} · ${PATIENT.treatment}`}
+        description={hasRealData ? `${patientName} & ${partnerName}` : `${PATIENT.name} & ${PARTNER.name} · ${PATIENT.treatment}`}
         action={
           <div className="flex flex-wrap gap-2">
             <Button icon={<Download className="h-4 w-4" />} onClick={() => toast({ title: 'Statement downloaded', body: 'Account statement exported as PDF.', tone: 'success' })}>
@@ -49,9 +101,9 @@ export function Billing() {
 
       {/* ============ MONEY TILES ============ */}
       <div className="grid gap-3.5 sm:grid-cols-3">
-        <MoneyTile label="Package Value" value={PACKAGE.value} tone="neutral" sub={PACKAGE.name} />
-        <MoneyTile label="Amount Paid" value={PACKAGE.paid} tone="completed" sub="2 instalments received" />
-        <MoneyTile label="Outstanding" value={PACKAGE.outstanding} tone="attention" sub="Due before oocyte retrieval" />
+        <MoneyTile label={hasRealData ? 'Total Billed' : 'Package Value'} value={totals.value} tone="neutral" sub={hasRealData ? `${invoices.length} invoice${invoices.length === 1 ? '' : 's'}` : PACKAGE.name} />
+        <MoneyTile label="Amount Paid" value={totals.paid} tone="completed" sub={hasRealData ? 'Recorded payments' : '2 instalments received'} />
+        <MoneyTile label="Outstanding" value={totals.outstanding} tone="attention" sub="Due before oocyte retrieval" />
       </div>
 
       {/* ============ PROGRESS ============ */}
@@ -59,14 +111,14 @@ export function Billing() {
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[13px] font-semibold text-ink-900">Package collection progress</p>
-            <p className="text-[12px] text-ink-500">70% of the package value has been collected</p>
+            <p className="text-[12px] text-ink-500">{Math.round(collected)}% of the billed value has been collected</p>
           </div>
-          <Badge tone="attention">₹75,000 pending</Badge>
+          <Badge tone="attention">{formatINR(Math.round(totals.outstanding))} pending</Badge>
         </div>
         <ProgressBar value={collected} height={10} />
         <div className="mt-2 flex justify-between text-[11px] text-ink-400">
           <span className="tnum">{formatINR(0)}</span>
-          <span className="tnum">{formatINR(PACKAGE.value)}</span>
+          <span className="tnum">{formatINR(Math.round(totals.value))}</span>
         </div>
       </Card>
 
@@ -76,7 +128,7 @@ export function Billing() {
           <CardHeader
             icon={<Receipt className="h-4 w-4" />}
             title="Invoice History"
-            subtitle={`${INVOICES.length} invoices raised against this treatment case`}
+            subtitle={`${invoices.length} invoice${invoices.length === 1 ? '' : 's'} raised against this treatment case`}
           />
 
           <div className="overflow-hidden">
@@ -88,8 +140,12 @@ export function Billing() {
               ))}
             </div>
 
+            {invoices.length === 0 && (
+              <p className="px-5 py-10 text-center text-[13px] text-ink-500">No invoices yet for this patient.</p>
+            )}
+
             <div className="stagger">
-              {INVOICES.map((inv, i) => (
+              {invoices.map((inv, i) => (
                 <div
                   key={inv.id}
                   style={{ ['--i' as string]: i }}
@@ -129,7 +185,7 @@ export function Billing() {
             <div className="text-right">
               <p className="text-[11px] text-ink-400">Total billed</p>
               <p className="tnum text-[15px] font-semibold text-ink-900">
-                {formatINR(INVOICES.reduce((s, i) => s + i.amount, 0))}
+                {formatINR(invoices.reduce((s, i) => s + i.amount, 0))}
               </p>
             </div>
           </div>

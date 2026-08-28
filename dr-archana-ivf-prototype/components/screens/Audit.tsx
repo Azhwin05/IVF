@@ -2,16 +2,35 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
-import { AUDIT_LOG } from '@/lib/data';
+import { AUDIT_LOG, type StatusTone } from '@/lib/data';
 import { cn, TONE } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Input, InfoNote } from '@/components/ui/primitives';
+import { useAuditEvents } from '@/lib/api/audit';
 import { ScrollText, Search, Download, ShieldCheck, Clock, Globe } from 'lucide-react';
 
 export function Audit() {
   const { toast } = useApp();
   const [q, setQ] = useState('');
 
+  const eventsQuery = useAuditEvents(q.trim() || undefined);
+  const hasRealData = (eventsQuery.data ?? []).length > 0;
+
+  const realRows = useMemo(
+    () =>
+      (eventsQuery.data ?? []).map((a) => ({
+        id: a.id.slice(0, 8).toUpperCase(),
+        user: a.actor_role ?? 'System',
+        action: a.action,
+        entity: a.entity_id ? `${a.entity_type} — ${a.entity_id.slice(0, 8)}` : a.entity_type,
+        time: new Date(a.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }),
+        ip: a.source_ip ?? '—',
+        tone: 'neutral' as StatusTone,
+      })),
+    [eventsQuery.data]
+  );
+
   const rows = useMemo(() => {
+    if (hasRealData) return realRows;
     if (!q.trim()) return AUDIT_LOG;
     const t = q.toLowerCase();
     return AUDIT_LOG.filter(
@@ -20,7 +39,7 @@ export function Audit() {
         a.action.toLowerCase().includes(t) ||
         a.entity.toLowerCase().includes(t)
     );
-  }, [q]);
+  }, [q, hasRealData, realRows]);
 
   return (
     <div className="screen-enter mx-auto max-w-[1200px] space-y-5 p-4 sm:p-6 lg:p-8">
@@ -40,9 +59,16 @@ export function Audit() {
 
       <div className="grid gap-3.5 sm:grid-cols-3">
         {[
-          { icon: ScrollText, l: 'Events Today', v: '1,284', s: 'Across all modules' },
+          {
+            icon: ScrollText,
+            l: 'Events Today',
+            v: hasRealData
+              ? (eventsQuery.data ?? []).filter((a) => new Date(a.timestamp).toDateString() === new Date().toDateString()).length.toLocaleString('en-IN')
+              : '1,284',
+            s: 'Across all modules',
+          },
           { icon: ShieldCheck, l: 'Integrity Status', v: 'Verified', s: 'Hash chain intact' },
-          { icon: Globe, l: 'Blocked Attempts', v: '1', s: 'Unknown device — Chennai' },
+          { icon: Globe, l: 'Blocked Attempts', v: hasRealData ? '—' : '1', s: hasRealData ? 'Not tracked yet' : 'Unknown device — Chennai' },
         ].map((s, i) => {
           const Icon = s.icon;
           return (

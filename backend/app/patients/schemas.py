@@ -77,3 +77,14 @@ class CoupleOut(BaseModel):
     relationship_info: str | None
     infertility_type: str | None
     infertility_duration: str | None
+
+
+class PatientDocumentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    document_type: str
+    original_filename: str
+    content_type: str
+    size_bytes: int
+    signed: bool
+    created_at: datetime
