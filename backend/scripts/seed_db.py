@@ -53,7 +53,15 @@ async def seed_demo_clinical_data(session, staff: dict[str, User]) -> None:
     journey on day one — not an empty database."""
     from app.cryostorage.models import CryoCustodyEvent, CryoLocation
     from app.embryology.models import Embryo, EmbryoStatus, OocyteAssessment
-    from app.ivf.models import CycleStage, IVFCycle, MonitoringVisit
+    from app.ivf.models import (
+        BetaHcgResult,
+        CycleStage,
+        IVFCycle,
+        MonitoringVisit,
+        PregnancyMilestone,
+        PregnancyOutcome,
+        PregnancyRecord,
+    )
     from app.patients.models import Couple, Patient
 
     existing = (await session.execute(select(Patient).where(Patient.uhid == "DAIVF-2026-00428"))).scalar_one_or_none()
@@ -165,8 +173,34 @@ async def seed_demo_clinical_data(session, staff: dict[str, User]) -> None:
                           notes="E-03 vitrified and stored in Straw 04"),
     ])
 
+    pregnancy = PregnancyRecord(
+        cycle_id=cycle.id, transfer_date=date(2026, 8, 7),
+        outcome=PregnancyOutcome.POSITIVE, estimated_due_date=date(2027, 5, 15),
+    )
+    session.add(pregnancy)
+    await session.flush()
+
+    session.add_all([
+        BetaHcgResult(pregnancy_id=pregnancy.id, day_label="Day 14", value_miu_ml=612, recorded_at=date(2026, 8, 21), interpretation="Positive"),
+        BetaHcgResult(pregnancy_id=pregnancy.id, day_label="Day 16", value_miu_ml=1248, recorded_at=date(2026, 8, 23), interpretation="Appropriate rise"),
+        BetaHcgResult(pregnancy_id=pregnancy.id, day_label="Day 21", value_miu_ml=5840, recorded_at=date(2026, 8, 28), interpretation="Strong progression"),
+        PregnancyMilestone(pregnancy_id=pregnancy.id, label="Embryo Transfer", milestone_date=date(2026, 8, 7),
+                            detail="Single blastocyst E-01 transferred", is_completed=True),
+        PregnancyMilestone(pregnancy_id=pregnancy.id, label="Positive Beta-hCG", milestone_date=date(2026, 8, 21),
+                            detail="612 mIU/mL — biochemical pregnancy confirmed", is_completed=True),
+        PregnancyMilestone(pregnancy_id=pregnancy.id, label="Gestational Sac", milestone_date=date(2026, 9, 4),
+                            detail="6 weeks — single intrauterine sac visualised", is_completed=True),
+        PregnancyMilestone(pregnancy_id=pregnancy.id, label="Cardiac Activity", milestone_date=date(2026, 9, 11),
+                            detail="7 weeks — fetal heart rate 128 bpm", is_completed=True),
+        PregnancyMilestone(pregnancy_id=pregnancy.id, label="First Trimester Scan", milestone_date=date(2026, 10, 9),
+                            detail="11-13 weeks NT scan scheduled", is_completed=False),
+        PregnancyMilestone(pregnancy_id=pregnancy.id, label="Delivery Outcome", milestone_date=date(2027, 5, 15),
+                            detail="Estimated due date", is_completed=False),
+    ])
+
     print(f"Seeded demo couple: Priya Raman ({priya.uhid}) & Arjun Kumar ({arjun.uhid}), cycle {cycle.cycle_number}")
     print(f"Seeded {len(embryos)} embryos (2 cryopreserved) for cycle {cycle.cycle_number}")
+    print("Seeded pregnancy record with 3 beta-hCG results and 6 milestones")
 
 
 async def main() -> None:

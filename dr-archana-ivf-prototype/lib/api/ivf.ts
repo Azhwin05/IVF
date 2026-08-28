@@ -100,3 +100,56 @@ export function useAdvanceCycleStage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['active-cycle'] }),
   });
 }
+
+export type PregnancyOutcome = 'pending' | 'positive' | 'negative' | 'biochemical_only';
+
+export interface BetaHcgOut {
+  id: string;
+  day_label: string;
+  value_miu_ml: number;
+  recorded_at: string;
+  interpretation: string | null;
+}
+
+export interface MilestoneOut {
+  id: string;
+  label: string;
+  milestone_date: string;
+  detail: string | null;
+  is_completed: boolean;
+}
+
+export interface PregnancyOut {
+  id: string;
+  cycle_id: string;
+  outcome: PregnancyOutcome;
+  estimated_due_date: string | null;
+  beta_hcg_results: BetaHcgOut[];
+  milestones: MilestoneOut[];
+}
+
+export function usePregnancyForCycle(cycleId: string | null) {
+  return useQuery({
+    queryKey: ['pregnancy', cycleId],
+    queryFn: () => apiFetch<PregnancyOut>(`/ivf/pregnancy/by-cycle/${cycleId}`),
+    enabled: !!cycleId,
+  });
+}
+
+export function useRecordBetaHcg() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { cycle_id: string; day_label: string; value_miu_ml: number; recorded_at: string; interpretation?: string | null }) =>
+      apiFetch<BetaHcgOut>('/ivf/pregnancy/beta-hcg', { method: 'POST', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pregnancy'] }),
+  });
+}
+
+export function useRecordPregnancyMilestone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { cycle_id: string; label: string; milestone_date: string; detail?: string | null }) =>
+      apiFetch<MilestoneOut>('/ivf/pregnancy/milestones', { method: 'POST', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pregnancy'] }),
+  });
+}
