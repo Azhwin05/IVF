@@ -53,6 +53,15 @@ async def get_custody_history(
     return await service.get_custody_history(session, embryo_id)
 
 
+@router.get("/transfers/by-cycle/{cycle_id}", response_model=TransferOut | None)
+async def get_transfer_for_cycle(
+    cycle_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("embryology.transfer")),
+) -> TransferOut | None:
+    return await service.get_transfer_for_cycle(session, cycle_id)
+
+
 @router.post("/transfers", response_model=TransferOut, status_code=201)
 async def initiate_transfer(
     body: TransferCreate,

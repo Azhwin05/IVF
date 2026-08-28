@@ -108,6 +108,16 @@ async def get_custody_history(session: AsyncSession, embryo_id: uuid.UUID) -> li
 # Embryo Transfer — 6-point checklist workflow
 # ---------------------------------------------------------------------------
 
+async def get_transfer_for_cycle(session: AsyncSession, cycle_id: uuid.UUID) -> EmbryoTransfer | None:
+    """The frontend's Transfer screen needs to know whether a transfer has
+    already been initiated for this cycle (to resume its checklist) rather
+    than blindly re-initiating one on every visit."""
+    result = await session.execute(
+        select(EmbryoTransfer).where(EmbryoTransfer.cycle_id == cycle_id).order_by(EmbryoTransfer.created_at.desc()).limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 async def initiate_transfer(
     session: AsyncSession, data: TransferCreate, *, actor_id: uuid.UUID, actor_role: str
 ) -> EmbryoTransfer:

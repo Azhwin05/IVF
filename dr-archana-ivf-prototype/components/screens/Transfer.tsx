@@ -2,9 +2,21 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
+import { useAuth } from '@/lib/auth';
 import { TRANSFER_CHECKLIST, EMBRYOS, PATIENT, PARTNER } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Field, InfoNote, Modal } from '@/components/ui/primitives';
+import { useCoupleForPatient, usePatientSummary } from '@/lib/api/patients';
+import { useActiveCycle } from '@/lib/api/ivf';
+import { useEmbryosForCycle } from '@/lib/api/embryology';
+import {
+  useTransferForCycle,
+  useInitiateTransfer,
+  useCheckTransferItem,
+  useCompleteTransfer,
+} from '@/lib/api/cryostorage';
+import { useDoctors, useEmbryologists } from '@/lib/api/users';
+import { ApiError } from '@/lib/api/client';
 import {
   Check,
   ShieldCheck,
@@ -17,20 +29,109 @@ import {
 } from 'lucide-react';
 
 export function Transfer() {
-  const { go, toast, completeTransfer, transferComplete } = useApp();
+  const { go, toast, completeTransfer, transferComplete, selectedPatientId } = useApp();
+  const { user: authUser } = useAuth();
   const [checked, setChecked] = useState<string[]>([]);
   const [confirm, setConfirm] = useState(false);
   const [running, setRunning] = useState(false);
 
-  const embryo = EMBRYOS.find((e) => e.id === 'E-01')!;
-  const allChecked = checked.length === TRANSFER_CHECKLIST.length;
+  const summaryQuery = usePatientSummary(selectedPatientId);
+  const coupleQuery = useCoupleForPatient(selectedPatientId);
+  const cycleQuery = useActiveCycle(coupleQuery.data?.id ?? null);
+  const embryosQuery = useEmbryosForCycle(cycleQuery.data?.id ?? null);
+  const transferQuery = useTransferForCycle(cycleQuery.data?.id ?? null);
+  const doctorsQuery = useDoctors();
+  const embryologistsQuery = useEmbryologists();
+  const initiateTransfer = useInitiateTransfer();
+  const checkItem = useCheckTransferItem();
+  const completeTransferMutation = useCompleteTransfer();
 
-  const toggle = (id: string) =>
+  const selectedEmbryo = (embryosQuery.data ?? []).find((e) => e.status === 'selected_for_transfer') ?? null;
+  const hasRealData = !!cycleQuery.data && !!selectedEmbryo;
+  const realTransfer = transferQuery.data ?? null;
+
+  const embryo = hasRealData
+    ? {
+        id: selectedEmbryo!.label, day: selectedEmbryo!.day, grade: selectedEmbryo!.grade,
+        expansion: selectedEmbryo!.expansion ?? '—', icm: selectedEmbryo!.icm_grade ?? '—',
+        trophectoderm: selectedEmbryo!.trophectoderm_grade ?? '—',
+      }
+    : EMBRYOS.find((e) => e.id === 'E-01')!;
+
+  const patientName = summaryQuery.data?.full_name ?? PATIENT.name;
+  const patientUhid = summaryQuery.data?.uhid ?? PATIENT.id;
+  const realPartner = coupleQuery.data
+    ? coupleQuery.data.female_patient.id === selectedPatientId ? coupleQuery.data.male_patient : coupleQuery.data.female_patient
+    : null;
+  const partnerName = realPartner?.full_name ?? PARTNER.name;
+  const partnerUhid = realPartner?.uhid ?? PARTNER.id;
+
+  const allChecked = hasRealData
+    ? realTransfer
+      ? realTransfer.checklist.every((c) => c.checked)
+      : false
+    : checked.length === TRANSFER_CHECKLIST.length;
+  const isComplete = hasRealData ? !!realTransfer?.completed : transferComplete;
+
+  const toggle = (id: string) => {
+    if (hasRealData) {
+      // Real checklist items pass their real item_code as `id` (see the
+      // `items` view-model built below) — no lookup needed, unlike the
+      // static fixture's arbitrary c1..c6 ids.
+      if (!realTransfer || realTransfer.completed) return;
+      const item = realTransfer.checklist.find((c) => c.item_code === id);
+      if (item && !item.checked) {
+        checkItem.mutate({ transferId: realTransfer.id, itemCode: item.item_code });
+      }
+      return;
+    }
     setChecked((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+  };
 
-  const checkAll = () => setChecked(TRANSFER_CHECKLIST.map((c) => c.id));
+  const checkAll = () => {
+    if (hasRealData) return; // real checks are one-by-one, audited — no bulk shortcut
+    setChecked(TRANSFER_CHECKLIST.map((c) => c.id));
+  };
+
+  const beginTransfer = () => {
+    if (!cycleQuery.data || !selectedEmbryo) return;
+    const doctorId = authUser?.role_code === 'doctor' ? authUser.id : doctorsQuery.data?.[0]?.id;
+    const embryologistId = authUser?.role_code === 'embryologist' ? authUser.id : embryologistsQuery.data?.[0]?.id;
+    if (!doctorId || !embryologistId) {
+      toast({ title: 'Cannot start transfer', body: 'No doctor or embryologist on record to assign.', tone: 'error' });
+      return;
+    }
+    initiateTransfer.mutate(
+      {
+        cycle_id: cycleQuery.data.id, embryo_id: selectedEmbryo.id,
+        procedure_doctor_id: doctorId, embryologist_id: embryologistId,
+        transfer_date: new Date().toISOString().slice(0, 10),
+      },
+      { onError: (err) => toast({ title: 'Could not start transfer', body: err instanceof ApiError ? err.message : 'Please try again.', tone: 'error' }) }
+    );
+  };
 
   const runTransfer = () => {
+    if (hasRealData && realTransfer) {
+      setRunning(true);
+      completeTransferMutation.mutate(realTransfer.id, {
+        onSuccess: () => {
+          setRunning(false);
+          setConfirm(false);
+          toast({
+            title: 'Embryo transfer completed',
+            body: 'Procedure recorded. Luteal support prescribed.',
+            tone: 'success',
+          });
+          setTimeout(() => go('pregnancy'), 900);
+        },
+        onError: (err) => {
+          setRunning(false);
+          toast({ title: 'Could not complete transfer', body: err instanceof ApiError ? err.message : 'Please try again.', tone: 'error' });
+        },
+      });
+      return;
+    }
     setRunning(true);
     setTimeout(() => {
       setRunning(false);
@@ -50,9 +151,13 @@ export function Transfer() {
       <SectionTitle
         eyebrow="Procedure"
         title="Embryo Transfer"
-        description={`${PATIENT.name} · Transfer date 7 August 2026 · Ultrasound-guided single blastocyst transfer`}
+        description={
+          hasRealData && realTransfer
+            ? `${patientName} · Transfer date ${new Date(realTransfer.transfer_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} · Ultrasound-guided single blastocyst transfer`
+            : `${patientName} · Transfer date 7 August 2026 · Ultrasound-guided single blastocyst transfer`
+        }
         action={
-          transferComplete ? (
+          isComplete ? (
             <Badge tone="completed">Transfer completed</Badge>
           ) : (
             <Badge tone="scheduled">Awaiting sign-off</Badge>
@@ -93,10 +198,24 @@ export function Transfer() {
               <Field label="Number of Embryos" value="1 — elective single transfer" />
             </div>
             <div className="mt-3.5">
-              <Field label="Procedure Doctor" value="Dr. Archana S. Ayyanathan" />
+              <Field
+                label="Procedure Doctor"
+                value={
+                  hasRealData
+                    ? (authUser?.role_code === 'doctor' ? authUser.full_name : doctorsQuery.data?.[0]?.full_name) ?? 'Dr. Archana S. Ayyanathan'
+                    : 'Dr. Archana S. Ayyanathan'
+                }
+              />
             </div>
             <div className="mt-3.5">
-              <Field label="Embryologist" value="Dr. Meera Kapoor" />
+              <Field
+                label="Embryologist"
+                value={
+                  hasRealData
+                    ? (authUser?.role_code === 'embryologist' ? authUser.full_name : embryologistsQuery.data?.[0]?.full_name) ?? 'Dr. Meera Kapoor'
+                    : 'Dr. Meera Kapoor'
+                }
+              />
             </div>
 
             <div className="mt-4">
@@ -114,8 +233,9 @@ export function Transfer() {
             title="Pre-Transfer Safety Verification"
             subtitle="All six checks must be confirmed before the procedure can proceed"
             action={
+              !hasRealData &&
               !allChecked &&
-              !transferComplete && (
+              !isComplete && (
                 <Button size="sm" variant="ghost" onClick={checkAll}>
                   Verify all
                 </Button>
@@ -123,84 +243,109 @@ export function Transfer() {
             }
           />
 
-          <div className="px-5">
-            {/* progress */}
-            <div className="mb-4 flex items-center gap-3 rounded-xl bg-ink-50 p-3">
-              <div className="flex-1">
-                <div className="mb-1.5 flex justify-between text-[11.5px]">
-                  <span className="font-medium text-ink-600">Verification progress</span>
-                  <span className="tnum font-semibold text-ink-900">
-                    {checked.length} of {TRANSFER_CHECKLIST.length}
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-ink-200">
-                  <div
-                    className={cn(
-                      'h-full rounded-full transition-[width] duration-500 ease-spring',
-                      allChecked ? 'bg-gradient-to-r from-brand-400 to-brand-600' : 'bg-gradient-to-r from-amber-400 to-amber-500'
-                    )}
-                    style={{ width: `${(checked.length / TRANSFER_CHECKLIST.length) * 100}%` }}
-                  />
-                </div>
-              </div>
-              {allChecked && (
-                <Badge tone="completed" className="animate-scale-in">
-                  Ready
-                </Badge>
-              )}
+          {hasRealData && !realTransfer ? (
+            <div className="px-5 pb-5">
+              <InfoNote tone="brand" icon={<Sparkles className="h-4 w-4" />}>
+                No transfer has been started for this cycle yet. Beginning the workflow creates the
+                6-point checklist below, each item audited as it's confirmed.
+              </InfoNote>
+              <Button
+                variant="primary"
+                className="mt-4 w-full"
+                loading={initiateTransfer.isPending}
+                icon={<ShieldCheck className="h-4 w-4" />}
+                onClick={beginTransfer}
+              >
+                {initiateTransfer.isPending ? 'Starting…' : 'Begin Transfer Verification'}
+              </Button>
             </div>
+          ) : (
+            <>
+              <div className="px-5">
+                {/* progress */}
+                {(() => {
+                  const items = hasRealData && realTransfer
+                    ? realTransfer.checklist.map((c) => ({ id: c.item_code, label: c.label, detail: TRANSFER_CHECKLIST.find((t) => t.label === c.label)?.detail ?? '', on: c.checked }))
+                    : TRANSFER_CHECKLIST.map((c) => ({ id: c.id, label: c.label, detail: c.detail, on: checked.includes(c.id) || isComplete }));
+                  const doneCount = items.filter((i) => i.on).length;
+                  return (
+                    <>
+                      <div className="mb-4 flex items-center gap-3 rounded-xl bg-ink-50 p-3">
+                        <div className="flex-1">
+                          <div className="mb-1.5 flex justify-between text-[11.5px]">
+                            <span className="font-medium text-ink-600">Verification progress</span>
+                            <span className="tnum font-semibold text-ink-900">
+                              {doneCount} of {items.length}
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-ink-200">
+                            <div
+                              className={cn(
+                                'h-full rounded-full transition-[width] duration-500 ease-spring',
+                                allChecked ? 'bg-gradient-to-r from-brand-400 to-brand-600' : 'bg-gradient-to-r from-amber-400 to-amber-500'
+                              )}
+                              style={{ width: `${(doneCount / items.length) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        {allChecked && (
+                          <Badge tone="completed" className="animate-scale-in">
+                            Ready
+                          </Badge>
+                        )}
+                      </div>
 
-            {/* items */}
-            <div className="stagger space-y-2 pb-5">
-              {TRANSFER_CHECKLIST.map((c, i) => {
-                const on = checked.includes(c.id) || transferComplete;
-                return (
-                  <button
-                    key={c.id}
-                    disabled={transferComplete}
-                    onClick={() => toggle(c.id)}
-                    style={{ ['--i' as string]: i }}
-                    className={cn(
-                      'flex w-full items-start gap-3.5 rounded-xl border p-3.5 text-left transition-all duration-250',
-                      on
-                        ? 'border-brand-300 bg-brand-50/50'
-                        : 'border-ink-200/70 bg-white hover:border-ink-300 hover:bg-ink-50/60'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-250',
-                        on ? 'border-brand-600 bg-brand-600' : 'border-ink-300 bg-white'
-                      )}
-                    >
-                      {on && (
-                        <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 6L9 17l-5-5" className="tick-path" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className={cn('text-[13.5px] font-medium', on ? 'text-brand-900' : 'text-ink-800')}>
-                        {c.label}
-                      </p>
-                      <p className="mt-0.5 text-[12px] leading-relaxed text-ink-500">{c.detail}</p>
-                    </div>
-                    {on && <Check className="mt-1 h-4 w-4 shrink-0 text-brand-600" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                      {/* items */}
+                      <div className="stagger space-y-2 pb-5">
+                        {items.map((c, i) => (
+                          <button
+                            key={c.id}
+                            disabled={isComplete || (hasRealData && c.on)}
+                            onClick={() => toggle(c.id)}
+                            style={{ ['--i' as string]: i }}
+                            className={cn(
+                              'flex w-full items-start gap-3.5 rounded-xl border p-3.5 text-left transition-all duration-250',
+                              c.on
+                                ? 'border-brand-300 bg-brand-50/50'
+                                : 'border-ink-200/70 bg-white hover:border-ink-300 hover:bg-ink-50/60'
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-250',
+                                c.on ? 'border-brand-600 bg-brand-600' : 'border-ink-300 bg-white'
+                              )}
+                            >
+                              {c.on && (
+                                <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20 6L9 17l-5-5" className="tick-path" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className={cn('text-[13.5px] font-medium', c.on ? 'text-brand-900' : 'text-ink-800')}>
+                                {c.label}
+                              </p>
+                              {c.detail && <p className="mt-0.5 text-[12px] leading-relaxed text-ink-500">{c.detail}</p>}
+                            </div>
+                            {c.on && <Check className="mt-1 h-4 w-4 shrink-0 text-brand-600" />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
 
           <div className="border-t border-ink-100 bg-ink-50/50 p-5">
-            {!allChecked && !transferComplete && (
+            {!allChecked && !isComplete && (
               <InfoNote tone="amber" icon={<AlertTriangle className="h-4 w-4" />}>
                 Complete every verification step before proceeding. This checklist forms part of the
                 permanent medical record and is auditable.
               </InfoNote>
             )}
 
-            {transferComplete ? (
+            {isComplete ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600">
@@ -208,7 +353,11 @@ export function Transfer() {
                   </div>
                   <div>
                     <p className="text-[13.5px] font-semibold text-ink-900">Transfer completed</p>
-                    <p className="text-[12px] text-ink-500">Recorded 7 August 2026, 11:42 AM</p>
+                    <p className="text-[12px] text-ink-500">
+                      {hasRealData && realTransfer
+                        ? `Recorded for ${new Date(realTransfer.transfer_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                        : 'Recorded 7 August 2026, 11:42 AM'}
+                    </p>
                   </div>
                 </div>
                 <Button variant="primary" iconRight={<ArrowRight className="h-4 w-4" />} onClick={() => go('pregnancy')}>
@@ -228,6 +377,8 @@ export function Transfer() {
               </Button>
             )}
           </div>
+            </>
+          )}
         </Card>
       </div>
 
@@ -251,12 +402,21 @@ export function Transfer() {
         <div className="space-y-4">
           <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Patient" value={`${PATIENT.name} — ${PATIENT.id}`} />
-              <Field label="Partner" value={`${PARTNER.name} — ${PARTNER.id}`} />
+              <Field label="Patient" value={`${patientName} — ${patientUhid}`} />
+              <Field label="Partner" value={`${partnerName} — ${partnerUhid}`} />
               <Field label="Embryo" value={`${embryo.id} · Day ${embryo.day} · Grade ${embryo.grade}`} />
-              <Field label="Procedure Date" value="7 August 2026" />
-              <Field label="Clinician" value="Dr. Archana S. Ayyanathan" />
-              <Field label="Embryologist" value="Dr. Meera Kapoor" />
+              <Field
+                label="Procedure Date"
+                value={hasRealData && realTransfer ? new Date(realTransfer.transfer_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '7 August 2026'}
+              />
+              <Field
+                label="Clinician"
+                value={hasRealData ? (authUser?.role_code === 'doctor' ? authUser.full_name : doctorsQuery.data?.[0]?.full_name) ?? 'Dr. Archana S. Ayyanathan' : 'Dr. Archana S. Ayyanathan'}
+              />
+              <Field
+                label="Embryologist"
+                value={hasRealData ? (authUser?.role_code === 'embryologist' ? authUser.full_name : embryologistsQuery.data?.[0]?.full_name) ?? 'Dr. Meera Kapoor' : 'Dr. Meera Kapoor'}
+              />
             </div>
           </div>
 

@@ -44,6 +44,23 @@ async def list_doctors(
     ]
 
 
+@router.get("/embryologists", response_model=list[UserSummary])
+async def list_embryologists(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("embryology.read")),
+) -> list[UserSummary]:
+    """Same rationale as /users/doctors — the transfer workflow needs to
+    pick an embryologist without granting admin.manage_users."""
+    users = await service.list_users_by_role_code(session, "embryologist")
+    return [
+        UserSummary(
+            id=u.id, employee_code=u.employee_code, full_name=u.full_name, email=u.email,
+            department=u.department, is_active=u.is_active, role_code=u.role.code,
+        )
+        for u in users
+    ]
+
+
 @router.post("", response_model=UserSummary, status_code=201)
 async def create_user(
     body: UserCreate,

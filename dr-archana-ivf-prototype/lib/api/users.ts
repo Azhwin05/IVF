@@ -9,3 +9,11 @@ export function useDoctors() {
     staleTime: 5 * 60_000,
   });
 }
+
+export function useEmbryologists() {
+  return useQuery({
+    queryKey: ['embryologists'],
+    queryFn: () => apiFetch<UserSummary[]>('/users/embryologists'),
+    staleTime: 5 * 60_000,
+  });
+}
