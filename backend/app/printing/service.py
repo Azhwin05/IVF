@@ -14,6 +14,9 @@ import qrcode
 from barcode import Code128
 from barcode.writer import ImageWriter
 from pypdf import PdfWriter
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.printing.models import PrintLog
 
 
 def generate_qr_png(data: str) -> bytes:
@@ -44,3 +47,40 @@ PRINT_TEMPLATES = [
     "patient_id_card", "wristband", "prescription", "invoice", "receipt",
     "lab_report", "consent_form", "ot_document",
 ]
+
+
+async def record_print_event(
+    session: AsyncSession,
+    *,
+    document_type: str,
+    printed_by_id: uuid.UUID,
+    patient_id: uuid.UUID | None = None,
+    context_entity_type: str | None = None,
+    context_entity_id: str | None = None,
+) -> PrintLog:
+    """Single call every print/export endpoint in the system should make —
+    new requirement (source doc §5/§2): 'who printed what, for whom, when'
+    must be queryable on its own, not buried inside the generic audit
+    stream. Call this from every future printable feature (prescriptions,
+    consent forms, sample stickers, discharge summaries) rather than each
+    one inventing its own logging."""
+    log = PrintLog(
+        document_type=document_type,
+        printed_by_id=printed_by_id,
+        patient_id=patient_id,
+        context_entity_type=context_entity_type,
+        context_entity_id=context_entity_id,
+    )
+    session.add(log)
+    await session.flush()
+    return log
+
+
+async def list_print_history(session: AsyncSession, *, patient_id: uuid.UUID | None = None, limit: int = 200) -> list[PrintLog]:
+    from sqlalchemy import select
+
+    stmt = select(PrintLog).order_by(PrintLog.printed_at.desc()).limit(limit)
+    if patient_id:
+        stmt = stmt.where(PrintLog.patient_id == patient_id)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())

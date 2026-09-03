@@ -23,6 +23,7 @@ from app.notifications import models as _notifications_models  # noqa: F401
 from app.ot import models as _ot_models  # noqa: F401
 from app.patients import models as _patients_models  # noqa: F401
 from app.pharmacy import models as _pharmacy_models  # noqa: F401
+from app.printing import models as _printing_models  # noqa: F401
 from app.purchasing import models as _purchasing_models  # noqa: F401
 from app.quality import models as _quality_models  # noqa: F401
 from app.roles import models as _roles_models  # noqa: F401

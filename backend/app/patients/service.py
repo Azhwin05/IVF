@@ -7,8 +7,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.service import record_audit_event
 from app.core.exceptions import NotFoundError
 from app.events.bus import EventType, emit
-from app.patients.models import Couple, Patient
-from app.patients.schemas import CoupleCreate, PatientCreate, PatientUpdate
+from app.patients.models import (
+    DOCUMENT_TYPE_AADHAAR,
+    DOCUMENT_TYPE_VISA,
+    Couple,
+    DocumentVerificationStatus,
+    Patient,
+    PatientDocument,
+    VisaSupportRequest,
+)
+from app.patients.schemas import (
+    CoupleCreate,
+    PatientCreate,
+    PatientUpdate,
+    VisaSupportRequestCreate,
+    VisaSupportStatusUpdate,
+)
 
 
 async def generate_uhid(session: AsyncSession) -> str:
@@ -110,3 +124,91 @@ async def get_couple_for_patient(session: AsyncSession, patient_id: uuid.UUID) -
         )
     )
     return result.scalar_one_or_none()
+
+
+async def get_mandatory_document_status(session: AsyncSession, patient_id: uuid.UUID) -> dict:
+    """New requirement (source doc §4/§35 checklist 1-2): Aadhaar mandatory
+    for Indian patients, visa mandatory for international patients."""
+    patient = await get_patient(session, patient_id)
+    required_type = DOCUMENT_TYPE_VISA if patient.is_international else DOCUMENT_TYPE_AADHAAR
+
+    result = await session.execute(
+        select(PatientDocument)
+        .where(PatientDocument.patient_id == patient_id, PatientDocument.document_type == required_type)
+        .order_by(PatientDocument.created_at.desc())
+    )
+    doc = result.scalars().first()
+
+    return {
+        "patient_id": patient_id,
+        "required_document_type": required_type,
+        "is_uploaded": doc is not None,
+        "is_verified": doc is not None and doc.verification_status == DocumentVerificationStatus.VERIFIED,
+    }
+
+
+async def create_visa_support_request(
+    session: AsyncSession, data: VisaSupportRequestCreate, *, actor_id: uuid.UUID, actor_role: str
+) -> VisaSupportRequest:
+    request = VisaSupportRequest(**data.model_dump())
+    session.add(request)
+    await session.flush()
+
+    await record_audit_event(
+        session, actor_id=actor_id, actor_role=actor_role,
+        action="patients.visa_support_requested", entity_type="VisaSupportRequest", entity_id=str(request.id),
+        after_state={"request_type": data.request_type},
+    )
+    return request
+
+
+async def list_visa_support_requests(session: AsyncSession, patient_id: uuid.UUID) -> list[VisaSupportRequest]:
+    result = await session.execute(
+        select(VisaSupportRequest).where(VisaSupportRequest.patient_id == patient_id).order_by(VisaSupportRequest.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def update_visa_support_status(
+    session: AsyncSession, request_id: uuid.UUID, data: VisaSupportStatusUpdate, *, actor_id: uuid.UUID, actor_role: str
+) -> VisaSupportRequest:
+    request = await session.get(VisaSupportRequest, request_id)
+    if not request:
+        raise NotFoundError("Visa support request not found")
+
+    before = {"status": request.status.value}
+    request.status = data.status
+    request.handled_by_id = actor_id
+    if data.notes:
+        request.notes = data.notes
+    await session.flush()
+
+    await record_audit_event(
+        session, actor_id=actor_id, actor_role=actor_role,
+        action="patients.visa_support_status_changed", entity_type="VisaSupportRequest", entity_id=str(request.id),
+        before_state=before, after_state={"status": data.status.value},
+    )
+    return request
+
+
+async def verify_document(
+    session: AsyncSession, document_id: uuid.UUID, *, approve: bool, notes: str | None, actor_id: uuid.UUID, actor_role: str
+) -> PatientDocument:
+    """New requirement (source doc §4) — Aadhaar/visa verification status,
+    distinct from the generic upload audit event already recorded by
+    documents.py's upload_document endpoint."""
+    doc = await session.get(PatientDocument, document_id)
+    if not doc:
+        raise NotFoundError("Document not found")
+
+    doc.verification_status = DocumentVerificationStatus.VERIFIED if approve else DocumentVerificationStatus.REJECTED
+    doc.verified_by_id = actor_id
+    doc.verified_at = datetime.now(timezone.utc)
+    await session.flush()
+
+    await record_audit_event(
+        session, actor_id=actor_id, actor_role=actor_role,
+        action="patients.document_verified" if approve else "patients.document_rejected",
+        entity_type="PatientDocument", entity_id=str(doc.id), reason=notes,
+    )
+    return doc

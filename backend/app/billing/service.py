@@ -24,7 +24,7 @@ from app.billing.models import (
     PaymentMethod,
 )
 from app.billing.schemas import InvoiceCreate
-from app.core.exceptions import ConflictError, NotFoundError, ValidationFailedError
+from app.core.exceptions import ConflictError, NotFoundError, PaymentRequiredError, ValidationFailedError
 from app.events.bus import EventType, emit
 
 
@@ -98,6 +98,58 @@ def is_payment_satisfied(invoice: Invoice) -> bool:
     """The check the workflow engine (Phase 3) calls before allowing a
     chargeable step to proceed — the billing-lock gate from spec §14."""
     return invoice.status in (InvoiceStatus.PAID, InvoiceStatus.OVERRIDDEN) or invoice.outstanding_paise <= 0
+
+
+async def assert_charge_cleared(
+    session: AsyncSession, *, patient_id: uuid.UUID, source_module: str, source_entity_id: str,
+) -> None:
+    """The shared payment-clearance gate used by every new payment-gated
+    workflow from the source requirements doc — injections (§10),
+    embryology (§16), storage (§18), ET (§19). One implementation, applied
+    everywhere, instead of four modules each inventing their own billing
+    check (and drifting out of sync with each other).
+
+    Semantics — NEEDS HOSPITAL CONFIRMATION (flagged in
+    NEW_FEATURES_GAP_ANALYSIS.md §7/§13): this checks whether a charge
+    specifically tagged for this exact procedure (via Charge.source_module
+    / source_entity_id) is paid or overridden. If front-desk hasn't raised
+    a charge for this specific service yet, the gate blocks with a message
+    telling staff to bill it first — reusing Charge's existing tagging
+    columns rather than inventing a second payment-status mechanism. If
+    the hospital's actual rule is "zero overall outstanding balance on the
+    patient" instead of "this specific service is paid," change the query
+    below — the call sites (embryology/ivf/cryostorage routers) do not
+    need to change either way.
+
+    Raises ValidationFailedError (never a bare warning) if not cleared —
+    per source doc: 'Do not implement this as merely a visual warning.'
+    An authorized user can still proceed via the existing billing.override
+    permission on the specific invoice (POST /billing/invoices/{id}/override),
+    which is itself fully audited.
+    """
+    stmt = (
+        select(Charge)
+        .join(Invoice, Invoice.id == Charge.invoice_id)
+        .where(
+            Invoice.patient_id == patient_id,
+            Charge.source_module == source_module,
+            Charge.source_entity_id == source_entity_id,
+        )
+    )
+    result = await session.execute(stmt)
+    charge = result.scalars().first()
+
+    if charge is None:
+        raise PaymentRequiredError(
+            f"No charge has been raised yet for this {source_module} service — bill it before proceeding."
+        )
+
+    invoice = await get_invoice(session, charge.invoice_id)
+    if not is_payment_satisfied(invoice):
+        raise PaymentRequiredError(
+            f"Payment is not cleared for this service (outstanding ₹{invoice.outstanding_paise / 100:.2f}). "
+            "An authorized user can proceed via a billing override, which is fully audited."
+        )
 
 
 async def record_payment(

@@ -28,6 +28,7 @@ PERMISSIONS: list[tuple[str, str, str, bool]] = [
     ("patients.create", "patients", "Register new patients/couples", False),
     ("patients.update", "patients", "Edit patient demographic/medical data", False),
     ("patients.merge", "patients", "Merge duplicate patient records", True),
+    ("patients.sensitive_documents", "patients", "View/download Aadhaar, visa and other identity documents", True),
     # Appointments
     ("appointments.read", "appointments", "View appointment book", False),
     ("appointments.create", "appointments", "Book appointments", False),
@@ -41,6 +42,8 @@ PERMISSIONS: list[tuple[str, str, str, bool]] = [
     ("ivf.read", "ivf", "View IVF cycle and treatment plan data", False),
     ("ivf.write", "ivf", "Create/edit IVF cycles and treatment plans", False),
     ("ivf.monitoring.write", "ivf", "Record stimulation monitoring visits", False),
+    ("ivf.protocol.read", "ivf", "View the restricted treatment protocol", True),
+    ("ivf.protocol.write", "ivf", "Write the restricted treatment protocol", True),
     # Embryology
     ("embryology.read", "embryology", "View embryology records", False),
     ("embryology.write", "embryology", "Grade and record embryo development", False),
@@ -109,7 +112,7 @@ PERMISSIONS: list[tuple[str, str, str, bool]] = [
 # ---------------------------------------------------------------------------
 ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
     "doctor": ("Doctor", [
-        "patients.read", "patients.create", "patients.update",
+        "patients.read", "patients.create", "patients.update", "patients.sensitive_documents",
         "appointments.read", "appointments.create", "appointments.checkin", "appointments.cancel",
         "clinical.read", "clinical.write", "clinical.correct",
         "ivf.read", "ivf.write", "ivf.monitoring.write",
@@ -129,7 +132,7 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "pharmacy.read",
     ]),
     "receptionist": ("Receptionist", [
-        "patients.read", "patients.create",
+        "patients.read", "patients.create", "patients.sensitive_documents",
         "appointments.read", "appointments.create", "appointments.checkin", "appointments.cancel",
         "billing.read", "billing.create", "billing.payment",
     ]),
@@ -166,6 +169,26 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "audit.read",
         "maintenance.read", "quality.read", "assets.read",
     ]),
+    "chief_consultant": ("Chief Consultant", [
+        # Everything a doctor has, plus the restricted treatment protocol.
+        # New requirement (source doc §7/§33): "Protocol = Akshana Ma'am +
+        # Admin only." RBAC in this system is role-based, not per-user, so
+        # this role exists specifically to be assigned to that one
+        # individual (and any future chief consultant) without widening
+        # what the general "doctor" role can see — do not add
+        # ivf.protocol.* to the doctor role.
+        "patients.read", "patients.create", "patients.update", "patients.sensitive_documents",
+        "appointments.read", "appointments.create", "appointments.checkin", "appointments.cancel",
+        "clinical.read", "clinical.write", "clinical.correct",
+        "ivf.read", "ivf.write", "ivf.monitoring.write", "ivf.protocol.read", "ivf.protocol.write",
+        "embryology.read", "embryology.transfer",
+        "cryostorage.read",
+        "laboratory.read", "laboratory.order",
+        "ot.read", "ot.schedule",
+        "pharmacy.read",
+        "billing.read", "billing.override",
+        "reports.read", "audit.read",
+    ]),
     "administrator": ("Administrator", ["*"]),  # gets every permission below
     "it_administrator": ("IT Administrator", [
         "admin.manage_users", "admin.manage_roles", "admin.manage_settings",
@@ -194,6 +217,16 @@ async def seed_roles_and_permissions(session: AsyncSession) -> None:
 
     for role_code, (name, perm_codes) in ROLE_DEFAULTS.items():
         if role_code in existing_roles:
+            if perm_codes == ["*"]:
+                # A "*" role (administrator) must always hold every current
+                # permission, including ones added to PERMISSIONS after this
+                # role was first seeded — re-sync it every run rather than
+                # silently drifting out of date whenever a new permission
+                # (like ivf.protocol.*) is introduced.
+                result = await session.execute(select(Role).where(Role.code == role_code))
+                role = result.scalar_one()
+                role.permissions = list(all_perms.values())
+                session.add(role)
             continue
         role = Role(code=role_code, name=name, is_system_role=True)
         if perm_codes == ["*"]:

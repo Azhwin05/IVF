@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_audit_event
 from app.core.exceptions import NotFoundError
-from app.laboratory.models import LabOrder, LabOrderStatus
-from app.laboratory.schemas import LabOrderCreate
+from app.laboratory.models import LabOrder, LabOrderStatus, LabResult
+from app.laboratory.schemas import LabOrderCreate, LabResultCreate
 
 
 async def _next_order_number(session: AsyncSession) -> str:
@@ -64,3 +64,28 @@ async def update_order_status(
         before_state={"status": before}, after_state={"status": status.value},
     )
     return order
+
+
+async def add_result(
+    session: AsyncSession, order_id: uuid.UUID, data: LabResultCreate, *, actor_id: uuid.UUID, actor_role: str
+) -> LabResult:
+    order = await session.get(LabOrder, order_id)
+    if not order:
+        raise NotFoundError("Lab order not found")
+
+    result = LabResult(order_id=order_id, entered_by_id=actor_id, **data.model_dump())
+    session.add(result)
+    await session.flush()
+
+    await record_audit_event(
+        session, actor_id=actor_id, actor_role=actor_role,
+        action="laboratory.result_entered", entity_type="LabResult", entity_id=str(result.id),
+        after_state={"parameter_name": result.parameter_name, "value": result.value, "flag": result.flag.value},
+    )
+    return result
+
+
+async def list_results(session: AsyncSession, order_id: uuid.UUID) -> list[LabResult]:
+    stmt = select(LabResult).where(LabResult.order_id == order_id).order_by(LabResult.created_at.asc())
+    result = await session.execute(stmt)
+    return list(result.scalars().all())

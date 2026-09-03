@@ -38,11 +38,36 @@ class TaskStatus(str, enum.Enum):
     ESCALATED = "escalated"
 
 
+class TaskPriority(str, enum.Enum):
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    URGENT = "urgent"
+
+
+class AlertType(str, enum.Enum):
+    """New requirement (source doc §8) — typed so a UI can filter/badge
+    consistently instead of pattern-matching free-text titles."""
+    FOLLOW_UP = "follow_up"
+    PROCEDURE_REMINDER = "procedure_reminder"
+    EGG_EVENT = "egg_event"
+    MEDICATION_REMINDER = "medication_reminder"
+    FRONT_DESK = "front_desk"
+    OTHER = "other"
+
+
 class NotificationTask(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     """E.g. 'Call Patient — Priya Raman — Tomorrow: Oocyte Retrieval 10:30 AM'
     with [Mark Called] / [Not Reachable] / [Reschedule] actions, from
-    spec §19's example."""
+    spec §19's example. DB-backed with a real due_at/status — critical
+    reminders must never be implemented as frontend-only timers (source
+    doc §8)."""
     __tablename__ = "notification_tasks"
+
+    patient_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("patients.id"), nullable=True, index=True)
+    alert_type: Mapped[AlertType] = mapped_column(Enum(AlertType), default=AlertType.OTHER, index=True)
+    priority: Mapped[TaskPriority] = mapped_column(Enum(TaskPriority), default=TaskPriority.NORMAL, index=True)
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     assigned_to_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)

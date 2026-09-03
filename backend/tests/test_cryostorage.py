@@ -1,7 +1,9 @@
 """
 Embryo transfer checklist gate — the server-side enforcement behind the
-frontend's 6-point safety checklist UI (spec §6/§20).
+frontend's 6-point safety checklist UI (spec §6/§20) — plus the ET
+payment-clearance gate (source doc §19, new requirement).
 """
+import uuid
 from datetime import date
 
 from httpx import AsyncClient
@@ -10,6 +12,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.embryology.models import Embryo
 from app.ivf.models import IVFCycle
 from app.patients.models import Couple, Patient
+
+
+async def _clear_et_charge(client: AsyncClient, admin_headers: dict, *, patient_id, cycle_id) -> None:
+    """Completing a transfer is payment-gated (source doc §19) — raise and
+    fully pay the tagged charge so tests can reach the gated behavior
+    they're actually testing (the checklist), same as how the checklist
+    itself has to be fully checked first."""
+    invoice_resp = await client.post(
+        "/api/v1/billing/invoices", headers=admin_headers,
+        json={
+            "patient_id": str(patient_id),
+            "charges": [{
+                "service_code": "ET",
+                "description": "Embryo Transfer",
+                "amount_paise": 2500000,
+                "source_module": "embryo_transfer",
+                "source_entity_id": str(cycle_id),
+            }],
+        },
+    )
+    invoice = invoice_resp.json()
+    await client.post(
+        "/api/v1/billing/payments", headers={**admin_headers, "Idempotency-Key": str(uuid.uuid4())},
+        json={"invoice_id": invoice["id"], "amount_paise": 2500000, "method": "cash"},
+    )
 
 
 async def _seed_cycle_with_embryo(db_session: AsyncSession, *, doctor_id):
@@ -81,6 +108,9 @@ async def test_transfer_completes_only_after_all_six_items_checked(
         )
         assert check_resp.status_code == 204
 
+    couple = await db_session.get(Couple, cycle.couple_id)
+    await _clear_et_charge(client, admin_headers, patient_id=couple.female_patient_id, cycle_id=cycle.id)
+
     complete_resp = await client.post(f"/api/v1/cryostorage/transfers/{transfer['id']}/complete", headers=admin_headers)
     assert complete_resp.status_code == 200
     assert complete_resp.json()["completed"] is True
@@ -101,6 +131,9 @@ async def test_transfer_cannot_be_completed_twice(
     transfer = create_resp.json()
     for item in transfer["checklist"]:
         await client.post(f"/api/v1/cryostorage/transfers/{transfer['id']}/checklist/{item['item_code']}", headers=admin_headers)
+
+    couple = await db_session.get(Couple, cycle.couple_id)
+    await _clear_et_charge(client, admin_headers, patient_id=couple.female_patient_id, cycle_id=cycle.id)
 
     first = await client.post(f"/api/v1/cryostorage/transfers/{transfer['id']}/complete", headers=admin_headers)
     assert first.status_code == 200

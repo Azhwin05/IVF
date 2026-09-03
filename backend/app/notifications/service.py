@@ -39,11 +39,22 @@ async def mark_read(session: AsyncSession, notification_id: uuid.UUID) -> None:
         await session.flush()
 
 
-async def create_task(session: AsyncSession, data: TaskCreate) -> NotificationTask:
-    task = NotificationTask(**data.model_dump())
+async def create_task(session: AsyncSession, data: TaskCreate, *, created_by_id: uuid.UUID | None = None) -> NotificationTask:
+    task = NotificationTask(created_by_id=created_by_id, **data.model_dump())
     session.add(task)
     await session.flush()
     return task
+
+
+async def list_patient_alerts(session: AsyncSession, patient_id: uuid.UUID) -> list[NotificationTask]:
+    """New requirement (source doc §8) — patient-linked alerts view."""
+    stmt = (
+        select(NotificationTask)
+        .where(NotificationTask.patient_id == patient_id)
+        .order_by(NotificationTask.due_at.asc())
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def resolve_task(session: AsyncSession, task_id: uuid.UUID, resolution: str) -> NotificationTask:

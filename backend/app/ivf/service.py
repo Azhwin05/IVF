@@ -5,19 +5,31 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_audit_event
+from app.billing.service import assert_charge_cleared
 from app.clinical.models import TimelineEventType
 from app.clinical.service import add_timeline_event
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.ivf.models import (
     BetaHcgResult,
     CycleStage,
+    InjectionAdministration,
+    InjectionStatus,
     IVFCycle,
     MonitoringVisit,
     PregnancyMilestone,
     PregnancyRecord,
     TreatmentPlan,
+    TreatmentProtocol,
 )
-from app.ivf.schemas import BetaHcgCreate, CycleCreate, MilestoneCreate, MonitoringVisitCreate, TreatmentPlanUpsert
+from app.ivf.schemas import (
+    BetaHcgCreate,
+    CycleCreate,
+    InjectionScheduleCreate,
+    MilestoneCreate,
+    MonitoringVisitCreate,
+    TreatmentPlanUpsert,
+    TreatmentProtocolUpsert,
+)
 from app.patients.models import Couple
 
 
@@ -164,6 +176,42 @@ async def upsert_treatment_plan(
     return plan
 
 
+async def get_treatment_protocol(session: AsyncSession, cycle_id: uuid.UUID) -> TreatmentProtocol | None:
+    """Caller must already hold ivf.protocol.read — enforced at the router,
+    per source doc §7/§33's non-negotiable rule that this cannot be a
+    frontend-only restriction."""
+    result = await session.execute(select(TreatmentProtocol).where(TreatmentProtocol.cycle_id == cycle_id))
+    return result.scalar_one_or_none()
+
+
+async def upsert_treatment_protocol(
+    session: AsyncSession, cycle_id: uuid.UUID, data: TreatmentProtocolUpsert, *, actor_id: uuid.UUID, actor_role: str
+) -> TreatmentProtocol:
+    await get_cycle(session, cycle_id)
+    result = await session.execute(select(TreatmentProtocol).where(TreatmentProtocol.cycle_id == cycle_id))
+    protocol = result.scalar_one_or_none()
+
+    before = None
+    if protocol is None:
+        protocol = TreatmentProtocol(cycle_id=cycle_id, created_by_id=actor_id, **data.model_dump())
+        session.add(protocol)
+    else:
+        before = {"content": protocol.content, "fields": protocol.fields}
+        protocol.updated_by_id = actor_id
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(protocol, field, value)
+    await session.flush()
+
+    # is_critical=True permission — this write is exactly the kind of
+    # action the audit trail exists for (source doc §33's protocol rule).
+    await record_audit_event(
+        session, actor_id=actor_id, actor_role=actor_role,
+        action="ivf.protocol_saved", entity_type="TreatmentProtocol", entity_id=str(protocol.id),
+        before_state=before, after_state={"content": data.content}, reason="Restricted protocol update",
+    )
+    return protocol
+
+
 async def get_or_create_pregnancy(session: AsyncSession, cycle_id: uuid.UUID) -> PregnancyRecord:
     result = await session.execute(select(PregnancyRecord).where(PregnancyRecord.cycle_id == cycle_id))
     record = result.scalar_one_or_none()
@@ -228,3 +276,69 @@ async def record_pregnancy_milestone(
         action="ivf.pregnancy_milestone_recorded", entity_type="PregnancyMilestone", entity_id=str(milestone.id),
     )
     return milestone
+
+
+# ---------------------------------------------------------------------------
+# Injection administration — payment-gated (source doc §10)
+# ---------------------------------------------------------------------------
+
+async def schedule_injection(
+    session: AsyncSession, data: InjectionScheduleCreate, *, actor_id: uuid.UUID, actor_role: str
+) -> InjectionAdministration:
+    injection = InjectionAdministration(**data.model_dump())
+    session.add(injection)
+    await session.flush()
+
+    await record_audit_event(
+        session, actor_id=actor_id, actor_role=actor_role,
+        action="ivf.injection_scheduled", entity_type="InjectionAdministration", entity_id=str(injection.id),
+        after_state={"medicine_name": data.medicine_name, "dose": data.dose},
+    )
+    return injection
+
+
+async def list_injections_for_cycle(session: AsyncSession, cycle_id: uuid.UUID) -> list[InjectionAdministration]:
+    result = await session.execute(
+        select(InjectionAdministration).where(InjectionAdministration.cycle_id == cycle_id)
+        .order_by(InjectionAdministration.scheduled_at)
+    )
+    return list(result.scalars().all())
+
+
+async def administer_injection(
+    session: AsyncSession, injection_id: uuid.UUID, notes: str | None, *, actor_id: uuid.UUID, actor_role: str
+) -> InjectionAdministration:
+    """The critical business rule from source doc §10:
+    Prescription/Plan -> Billing Requirement -> Accounts Payment Clearance
+    -> Permission to Proceed -> Injection Issue/Administration -> Audit.
+    Enforced here transactionally — not a frontend warning. See
+    NEW_FEATURES_GAP_ANALYSIS.md §7 for the exact-clearance-definition
+    caveat (currently: the cycle's tagged 'injections' charge must be paid
+    or overridden)."""
+    injection = await session.get(InjectionAdministration, injection_id)
+    if not injection:
+        raise NotFoundError("Injection schedule not found")
+    if injection.status != InjectionStatus.SCHEDULED:
+        raise ConflictError("This injection is not in a schedulable state.")
+
+    cycle = await get_cycle(session, injection.cycle_id)
+    couple_result = await session.execute(select(Couple).where(Couple.id == cycle.couple_id))
+    couple = couple_result.scalar_one()
+    await assert_charge_cleared(
+        session, patient_id=couple.female_patient_id,
+        source_module="injections", source_entity_id=str(injection.cycle_id),
+    )
+
+    injection.status = InjectionStatus.ADMINISTERED
+    injection.administered_at = datetime.now(timezone.utc)
+    injection.administered_by_id = actor_id
+    if notes:
+        injection.notes = notes
+    await session.flush()
+
+    await record_audit_event(
+        session, actor_id=actor_id, actor_role=actor_role,
+        action="ivf.injection_administered", entity_type="InjectionAdministration", entity_id=str(injection.id),
+        after_state={"administered_at": injection.administered_at.isoformat()}, reason=notes,
+    )
+    return injection

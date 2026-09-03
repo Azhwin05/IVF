@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.laboratory.models import LabOrderPriority, LabOrderSource, LabOrderStatus
+from app.laboratory.models import LabOrderPriority, LabOrderSource, LabOrderStatus, LabResultFlag
 
 
 class LabOrderCreate(BaseModel):
@@ -32,4 +32,25 @@ class LabOrderOut(BaseModel):
     external_lab_name: str | None
     priority: LabOrderPriority
     status: LabOrderStatus
+    created_at: datetime
+
+
+class LabResultCreate(BaseModel):
+    parameter_name: str
+    value: str
+    unit: str | None = None
+    reference_range: str | None = None
+    flag: LabResultFlag = LabResultFlag.NORMAL
+
+
+class LabResultOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    order_id: uuid.UUID
+    parameter_name: str
+    value: str
+    unit: str | None
+    reference_range: str | None
+    flag: LabResultFlag
+    entered_by_id: uuid.UUID
     created_at: datetime

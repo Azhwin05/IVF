@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_audit_event
+from app.billing.service import assert_charge_cleared
 from app.clinical.models import TimelineEventType
 from app.clinical.service import add_timeline_event
 from app.core.exceptions import ConflictError, NotFoundError, ValidationFailedError
@@ -25,6 +26,20 @@ from app.patients.models import Couple
 async def store_embryo(
     session: AsyncSession, data: CryoLocationCreate, *, actor_id: uuid.UUID, actor_role: str
 ) -> CryoLocation:
+    """Payment gate — new requirement (source doc §18): freezing/storage
+    charges must be cleared for storage to begin. Gated on the embryo's
+    cycle, tagged source_module='cryostorage_freeze'. See
+    NEW_FEATURES_GAP_ANALYSIS.md §18 for the exact-trigger caveat."""
+    embryo_lookup = await session.get(Embryo, data.embryo_id)
+    if not embryo_lookup:
+        raise NotFoundError("Embryo not found")
+    cycle_for_gate = await get_cycle(session, embryo_lookup.cycle_id)
+    couple_for_gate = (await session.execute(select(Couple).where(Couple.id == cycle_for_gate.couple_id))).scalar_one()
+    await assert_charge_cleared(
+        session, patient_id=couple_for_gate.female_patient_id,
+        source_module="cryostorage_freeze", source_entity_id=str(embryo_lookup.cycle_id),
+    )
+
     location = CryoLocation(**data.model_dump())
     session.add(location)
     await session.flush()
@@ -181,6 +196,17 @@ async def complete_transfer(
             f"Cannot complete transfer — unchecked items: {', '.join(i.label for i in unchecked)}",
             error_code="checklist_incomplete",
         )
+
+    # Payment gate — new requirement (source doc §19): required ET payment
+    # must be cleared before this restricted step. Checked last, after the
+    # checklist, so staff see clinical-readiness problems before a billing
+    # problem — but before ANY state actually changes.
+    cycle_for_gate = await get_cycle(session, transfer.cycle_id)
+    couple_for_gate = (await session.execute(select(Couple).where(Couple.id == cycle_for_gate.couple_id))).scalar_one()
+    await assert_charge_cleared(
+        session, patient_id=couple_for_gate.female_patient_id,
+        source_module="embryo_transfer", source_entity_id=str(transfer.cycle_id),
+    )
 
     transfer.completed = True
     transfer.completed_at = datetime.now(timezone.utc)

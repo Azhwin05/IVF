@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_audit_event
+from app.billing.service import assert_charge_cleared
 from app.clinical.models import TimelineEventType
 from app.clinical.service import add_timeline_event
 from app.core.exceptions import NotFoundError
@@ -11,6 +12,12 @@ from app.embryology.models import Embryo, OocyteAssessment
 from app.embryology.schemas import EmbryoCreate, OocyteAssessmentCreate
 from app.ivf.service import get_cycle
 from app.patients.models import Couple
+
+
+async def _patient_id_for_cycle(session: AsyncSession, cycle_id: uuid.UUID) -> uuid.UUID:
+    cycle = await get_cycle(session, cycle_id)
+    result = await session.execute(select(Couple).where(Couple.id == cycle.couple_id))
+    return result.scalar_one().female_patient_id
 
 
 async def create_oocyte_assessment(
@@ -51,6 +58,16 @@ async def grade_embryo(
 
 
 async def list_embryos_for_cycle(session: AsyncSession, cycle_id: uuid.UUID) -> list[Embryo]:
+    """Payment gate — new requirement (source doc §16): embryo details must
+    not be available to the embryologist until the retrieval/embryology
+    charge is cleared. Enforced here, server-side, so it can't be bypassed
+    via API, search, or export — not just hidden in the UI. See
+    NEW_FEATURES_GAP_ANALYSIS.md §13 for the exact-trigger-charge caveat:
+    this assumes the relevant charge is tagged source_module='embryology',
+    source_entity_id=<cycle_id> when billing raises it."""
+    patient_id = await _patient_id_for_cycle(session, cycle_id)
+    await assert_charge_cleared(session, patient_id=patient_id, source_module="embryology", source_entity_id=str(cycle_id))
+
     result = await session.execute(select(Embryo).where(Embryo.cycle_id == cycle_id).order_by(Embryo.label))
     return list(result.scalars().all())
 

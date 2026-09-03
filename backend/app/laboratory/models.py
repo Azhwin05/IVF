@@ -56,3 +56,28 @@ class LabOrder(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     result_document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("patient_documents.id"), nullable=True)
     result_verified_by_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     result_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class LabResultFlag(str, enum.Enum):
+    NORMAL = "normal"
+    LOW = "low"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class LabResult(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """Structured, chartable result values — new requirement (source doc §6):
+    previously a lab order's result existed only as an attached file
+    (`LabOrder.result_document_id`), so nothing in the system could show a
+    single numeric value like 'AMH: 2.4 ng/mL'. One order can have many
+    parameters (e.g. a hormonal panel), hence a separate table rather than
+    columns on LabOrder."""
+    __tablename__ = "lab_results"
+
+    order_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("lab_orders.id"), nullable=False, index=True)
+    parameter_name: Mapped[str] = mapped_column(String(255), nullable=False)  # e.g. "AMH", "FSH", "Lead Follicle"
+    value: Mapped[str] = mapped_column(String(64), nullable=False)  # kept as string — some params are qualitative ("Normal cavity")
+    unit: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    reference_range: Mapped[str | None] = mapped_column(String(64), nullable=True)  # e.g. "1.0 – 4.0"
+    flag: Mapped[LabResultFlag] = mapped_column(Enum(LabResultFlag), default=LabResultFlag.NORMAL)
+    entered_by_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)

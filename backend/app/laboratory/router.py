@@ -5,7 +5,7 @@ from app.core.database import get_db
 from app.core.deps import require_permission
 from app.laboratory import service
 from app.laboratory.models import LabOrderStatus
-from app.laboratory.schemas import LabOrderCreate, LabOrderOut, LabOrderStatusUpdate
+from app.laboratory.schemas import LabOrderCreate, LabOrderOut, LabOrderStatusUpdate, LabResultCreate, LabResultOut
 from app.users.models import User
 
 router = APIRouter(prefix="/laboratory", tags=["laboratory"])
@@ -37,3 +37,22 @@ async def update_status(
     current: User = Depends(require_permission("laboratory.result")),
 ) -> LabOrderOut:
     return await service.update_order_status(session, order_id, body.status, actor_id=current.id, actor_role=current.role.code)
+
+
+@router.post("/orders/{order_id}/results", response_model=LabResultOut, status_code=201)
+async def add_result(
+    order_id: str,
+    body: LabResultCreate,
+    session: AsyncSession = Depends(get_db),
+    current: User = Depends(require_permission("laboratory.result")),
+) -> LabResultOut:
+    return await service.add_result(session, order_id, body, actor_id=current.id, actor_role=current.role.code)
+
+
+@router.get("/orders/{order_id}/results", response_model=list[LabResultOut])
+async def get_results(
+    order_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("laboratory.read")),
+) -> list[LabResultOut]:
+    return await service.list_results(session, order_id)

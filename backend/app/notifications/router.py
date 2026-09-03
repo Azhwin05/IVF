@@ -32,9 +32,18 @@ async def mark_read(
 async def create_task(
     body: TaskCreate,
     session: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> TaskOut:
-    return await service.create_task(session, body)
+    return await service.create_task(session, body, created_by_id=current.id)
+
+
+@router.get("/tasks/by-patient/{patient_id}", response_model=list[TaskOut])
+async def list_patient_alerts(
+    patient_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[TaskOut]:
+    return await service.list_patient_alerts(session, patient_id)
 
 
 @router.post("/tasks/{task_id}/resolve", response_model=TaskOut)

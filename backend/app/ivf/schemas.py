@@ -1,9 +1,9 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.ivf.models import CycleStage, PregnancyOutcome
+from app.ivf.models import CycleStage, InjectionStatus, PregnancyOutcome
 
 
 class CycleCreate(BaseModel):
@@ -50,6 +50,45 @@ class CycleOut(BaseModel):
 
 class CycleStageUpdate(BaseModel):
     stage: CycleStage
+
+
+class InjectionScheduleCreate(BaseModel):
+    cycle_id: uuid.UUID
+    medicine_name: str
+    dose: str
+    scheduled_at: datetime
+
+
+class InjectionAdminister(BaseModel):
+    notes: str | None = None
+
+
+class InjectionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    cycle_id: uuid.UUID
+    medicine_name: str
+    dose: str
+    scheduled_at: datetime
+    status: InjectionStatus
+    administered_at: datetime | None
+    administered_by_id: uuid.UUID | None
+    notes: str | None
+
+
+class TreatmentProtocolUpsert(BaseModel):
+    content: str
+    fields: dict | None = None
+
+
+class TreatmentProtocolOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    cycle_id: uuid.UUID
+    content: str
+    fields: dict | None
+    created_by_id: uuid.UUID
+    updated_by_id: uuid.UUID | None
 
 
 class MonitoringVisitCreate(BaseModel):

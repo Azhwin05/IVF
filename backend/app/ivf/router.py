@@ -10,6 +10,9 @@ from app.ivf.schemas import (
     CycleCreate,
     CycleOut,
     CycleStageUpdate,
+    InjectionAdminister,
+    InjectionOut,
+    InjectionScheduleCreate,
     MilestoneCreate,
     MilestoneOut,
     MonitoringReview,
@@ -18,6 +21,8 @@ from app.ivf.schemas import (
     PregnancyOut,
     TreatmentPlanOut,
     TreatmentPlanUpsert,
+    TreatmentProtocolOut,
+    TreatmentProtocolUpsert,
 )
 from app.users.models import User
 
@@ -69,6 +74,58 @@ async def save_treatment_plan(
     current: User = Depends(require_permission("ivf.write")),
 ) -> TreatmentPlanOut:
     return await service.upsert_treatment_plan(session, cycle_id, body, actor_id=current.id, actor_role=current.role.code)
+
+
+@router.get("/cycles/{cycle_id}/protocol", response_model=TreatmentProtocolOut | None)
+async def get_treatment_protocol(
+    cycle_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("ivf.protocol.read")),
+) -> TreatmentProtocolOut | None:
+    """Restricted — Chief Consultant + Administrator only (source doc §7/§33).
+    Deliberately its own endpoint, never embedded in GET /ivf/cycles/{id},
+    so a broader ivf.read grant can never accidentally return this."""
+    return await service.get_treatment_protocol(session, cycle_id)
+
+
+@router.put("/cycles/{cycle_id}/protocol", response_model=TreatmentProtocolOut)
+async def save_treatment_protocol(
+    cycle_id: str,
+    body: TreatmentProtocolUpsert,
+    session: AsyncSession = Depends(get_db),
+    current: User = Depends(require_permission("ivf.protocol.write")),
+) -> TreatmentProtocolOut:
+    return await service.upsert_treatment_protocol(session, cycle_id, body, actor_id=current.id, actor_role=current.role.code)
+
+
+@router.post("/injections", response_model=InjectionOut, status_code=201)
+async def schedule_injection(
+    body: InjectionScheduleCreate,
+    session: AsyncSession = Depends(get_db),
+    current: User = Depends(require_permission("ivf.write")),
+) -> InjectionOut:
+    return await service.schedule_injection(session, body, actor_id=current.id, actor_role=current.role.code)
+
+
+@router.get("/injections/by-cycle/{cycle_id}", response_model=list[InjectionOut])
+async def list_injections(
+    cycle_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("ivf.read")),
+) -> list[InjectionOut]:
+    return await service.list_injections_for_cycle(session, cycle_id)
+
+
+@router.post("/injections/{injection_id}/administer", response_model=InjectionOut)
+async def administer_injection(
+    injection_id: str,
+    body: InjectionAdminister,
+    session: AsyncSession = Depends(get_db),
+    current: User = Depends(require_permission("ivf.monitoring.write")),
+) -> InjectionOut:
+    """Payment-gated — source doc §10. Raises 402 payment_required if
+    the injections charge for this cycle isn't paid/overridden."""
+    return await service.administer_injection(session, injection_id, body.notes, actor_id=current.id, actor_role=current.role.code)
 
 
 @router.post("/monitoring", response_model=MonitoringVisitOut, status_code=201)

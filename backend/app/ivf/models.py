@@ -40,6 +40,11 @@ class IVFCycle(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     treatment_plans: Mapped[list["TreatmentPlan"]] = relationship(back_populates="cycle", lazy="selectin")
     monitoring_visits: Mapped[list["MonitoringVisit"]] = relationship(back_populates="cycle", lazy="selectin")
+    # Deliberately NOT lazy="selectin" — unlike every other cycle relationship,
+    # the restricted protocol must never be pulled in "for free" by a normal
+    # GET /ivf/cycles/{id} response. Callers fetch it explicitly through the
+    # separate, permission-gated /ivf/cycles/{id}/protocol endpoint only.
+    treatment_protocol: Mapped["TreatmentProtocol | None"] = relationship(back_populates="cycle", uselist=False)
 
 
 class TreatmentPlan(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -51,6 +56,55 @@ class TreatmentPlan(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     objective: Mapped[str | None] = mapped_column(Text, nullable=True)
     medication_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # list of {name, dose, route, status}
     consent_status: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)  # "Remarks" per source doc §7 — normal ivf.read/write visibility
+
+
+class TreatmentProtocol(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """The restricted "Protocol" leg of Planning (source doc §7). Deliberately
+    a separate table from TreatmentPlan, not just a permission check on a
+    shared row — a future `SELECT *` on treatment_plans (e.g. an export, a
+    join, a report query) can never accidentally leak this by construction.
+    Gated by ivf.protocol.read/write, currently granted only to the
+    `chief_consultant` and `administrator` roles (roles/seed.py) — never
+    broaden this without an explicit decision, per source doc §33."""
+    __tablename__ = "treatment_protocols"
+
+    cycle_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ivf_cycles.id"), nullable=False, index=True)
+    cycle: Mapped["IVFCycle"] = relationship(back_populates="treatment_protocol")
+
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    fields: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # configurable structured fields, per source doc §7
+    created_by_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    updated_by_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+
+class InjectionStatus(str, enum.Enum):
+    SCHEDULED = "scheduled"
+    ADMINISTERED = "administered"
+    SKIPPED = "skipped"
+
+
+class InjectionAdministration(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """New requirement (source doc §10) — a real, queryable, state-machine
+    table for the 'prescribed vs administered' distinction. Previously
+    this only existed as a free-text `status` key inside
+    TreatmentPlan.medication_plan JSON, which the source doc's own rules
+    forbid relying on for a critical, auditable, payment-gated action.
+    Deliberately does NOT model a full prescription/dosage-template system
+    (source doc §9's prescription color/template is explicitly blocked on
+    the hospital providing the actual paper form — see
+    NEW_FEATURES_GAP_ANALYSIS.md §6) — this only tracks the administration
+    event itself, referencing the medicine/dose as recorded on the plan."""
+    __tablename__ = "injection_administrations"
+
+    cycle_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ivf_cycles.id"), nullable=False, index=True)
+    medicine_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    dose: Mapped[str] = mapped_column(String(64), nullable=False)
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    status: Mapped[InjectionStatus] = mapped_column(Enum(InjectionStatus), default=InjectionStatus.SCHEDULED, index=True)
+
+    administered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    administered_by_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 

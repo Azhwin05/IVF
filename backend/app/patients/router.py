@@ -7,9 +7,13 @@ from app.patients import service
 from app.patients.schemas import (
     CoupleCreate,
     CoupleOut,
+    MandatoryDocumentStatus,
     PatientListRow,
     PatientSummary,
     PatientUpdate,
+    VisaSupportRequestCreate,
+    VisaSupportRequestOut,
+    VisaSupportStatusUpdate,
 )
 from app.users.models import User
 
@@ -60,3 +64,42 @@ async def get_couple_for_patient(
     _: User = Depends(require_permission("patients.read")),
 ) -> CoupleOut | None:
     return await service.get_couple_for_patient(session, patient_id)
+
+
+@router.get("/{patient_id}/mandatory-documents", response_model=MandatoryDocumentStatus)
+async def get_mandatory_document_status(
+    patient_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("patients.read")),
+) -> MandatoryDocumentStatus:
+    """New requirement (source doc §4) — Aadhaar mandatory for Indian
+    patients, visa mandatory for international patients."""
+    return await service.get_mandatory_document_status(session, patient_id)
+
+
+@router.post("/visa-support", response_model=VisaSupportRequestOut, status_code=201)
+async def create_visa_support_request(
+    body: VisaSupportRequestCreate,
+    session: AsyncSession = Depends(get_db),
+    current: User = Depends(require_permission("patients.update")),
+) -> VisaSupportRequestOut:
+    return await service.create_visa_support_request(session, body, actor_id=current.id, actor_role=current.role.code)
+
+
+@router.get("/{patient_id}/visa-support", response_model=list[VisaSupportRequestOut])
+async def list_visa_support_requests(
+    patient_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("patients.read")),
+) -> list[VisaSupportRequestOut]:
+    return await service.list_visa_support_requests(session, patient_id)
+
+
+@router.post("/visa-support/{request_id}/status", response_model=VisaSupportRequestOut)
+async def update_visa_support_status(
+    request_id: str,
+    body: VisaSupportStatusUpdate,
+    session: AsyncSession = Depends(get_db),
+    current: User = Depends(require_permission("patients.update")),
+) -> VisaSupportRequestOut:
+    return await service.update_visa_support_status(session, request_id, body, actor_id=current.id, actor_role=current.role.code)
