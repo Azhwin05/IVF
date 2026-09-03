@@ -50,3 +50,36 @@ export function useUpdateLabOrderStatus() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lab-orders'] }),
   });
 }
+
+// ---- Structured lab results ----
+
+export type LabResultFlag = 'normal' | 'low' | 'high' | 'critical';
+
+export interface LabResultOut {
+  id: string;
+  order_id: string;
+  parameter_name: string;
+  value: string;
+  unit: string | null;
+  reference_range: string | null;
+  flag: LabResultFlag;
+  entered_by_id: string;
+  created_at: string;
+}
+
+export function useLabResults(orderId: string | null) {
+  return useQuery({
+    queryKey: ['lab-results', orderId],
+    queryFn: () => apiFetch<LabResultOut[]>(`/laboratory/orders/${orderId}/results`),
+    enabled: !!orderId,
+  });
+}
+
+export function useAddLabResult() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, ...body }: { orderId: string; parameter_name: string; value: string; unit?: string | null; reference_range?: string | null; flag?: LabResultFlag }) =>
+      apiFetch<LabResultOut>(`/laboratory/orders/${orderId}/results`, { method: 'POST', body }),
+    onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: ['lab-results', vars.orderId] }),
+  });
+}

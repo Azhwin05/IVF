@@ -4,11 +4,12 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import { LAB_ORDERS, LAB_METRICS, LAB_TEST_CATALOGUE } from '@/lib/data';
 import { cn, TONE } from '@/lib/utils';
-import { Card, CardHeader, Badge, Button, SectionTitle, Input, InfoNote } from '@/components/ui/primitives';
+import { Card, CardHeader, Badge, Button, SectionTitle, Input, InfoNote, Modal, Select } from '@/components/ui/primitives';
 import { useCountUp } from '@/lib/hooks';
-import { useLabOrders, type LabOrderStatus } from '@/lib/api/laboratory';
+import { useLabOrders, useLabResults, useAddLabResult, type LabOrderStatus, type LabResultFlag } from '@/lib/api/laboratory';
 import { useLabTestCatalogue } from '@/lib/api/administration';
 import { usePatients } from '@/lib/api/patients';
+import { ApiError } from '@/lib/api/client';
 import {
   FlaskConical,
   Search,
@@ -19,7 +20,84 @@ import {
   Plus,
   FileText,
   AlertTriangle,
+  ListChecks,
 } from 'lucide-react';
+
+const FLAG_TONE: Record<LabResultFlag, 'completed' | 'attention' | 'critical'> = {
+  normal: 'completed',
+  low: 'attention',
+  high: 'attention',
+  critical: 'critical',
+};
+
+function LabResultsModal({ orderId, orderLabel, open, onClose }: { orderId: string | null; orderLabel: string; open: boolean; onClose: () => void }) {
+  const { toast } = useApp();
+  const resultsQuery = useLabResults(orderId);
+  const addResult = useAddLabResult();
+  const [form, setForm] = useState({ parameter_name: '', value: '', unit: '', reference_range: '', flag: 'normal' as LabResultFlag });
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = () => {
+    if (!orderId) return;
+    setError(null);
+    addResult.mutate(
+      { orderId, ...form, unit: form.unit || null, reference_range: form.reference_range || null },
+      {
+        onSuccess: () => { setForm({ parameter_name: '', value: '', unit: '', reference_range: '', flag: 'normal' }); toast({ title: 'Result added', body: `${form.parameter_name} recorded.`, tone: 'success' }); },
+        onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not save the result.'),
+      }
+    );
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Investigation Results" subtitle={orderLabel} width="max-w-2xl">
+      <div className="space-y-4">
+        {(resultsQuery.data ?? []).length === 0 ? (
+          <p className="text-[13.5px] text-ink-500">No structured results entered yet for this order.</p>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-ink-200/70">
+            <div className="hidden grid-cols-[2fr_1fr_1fr_100px] gap-3 border-b border-ink-200/70 bg-ink-50/60 px-4 py-2 md:grid">
+              {['Parameter', 'Value', 'Reference', 'Flag'].map((h) => <span key={h} className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">{h}</span>)}
+            </div>
+            {(resultsQuery.data ?? []).map((r) => (
+              <div key={r.id} className="grid grid-cols-2 gap-2 border-b border-ink-100 px-4 py-2.5 last:border-0 md:grid-cols-[2fr_1fr_1fr_100px] md:items-center">
+                <span className="text-[13px] font-medium text-ink-800">{r.parameter_name}</span>
+                <span className="tnum text-[13px] text-ink-900">{r.value}{r.unit ? ` ${r.unit}` : ''}</span>
+                <span className="tnum text-[12px] text-ink-500">{r.reference_range ?? '—'}</span>
+                <Badge tone={FLAG_TONE[r.flag]} size="sm">{r.flag}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="rounded-xl border border-ink-200/70 p-4">
+          <p className="mb-3 text-[13px] font-semibold text-ink-800">Add a result</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input placeholder="Parameter (e.g. AMH)" value={form.parameter_name} onChange={(e) => setForm((f) => ({ ...f, parameter_name: e.target.value }))} />
+            <Input placeholder="Value" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} />
+            <Input placeholder="Unit (optional)" value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} />
+            <Input placeholder="Reference range (optional)" value={form.reference_range} onChange={(e) => setForm((f) => ({ ...f, reference_range: e.target.value }))} />
+            <Select value={form.flag} onChange={(e) => setForm((f) => ({ ...f, flag: e.target.value as LabResultFlag }))}>
+              <option value="normal">Normal</option>
+              <option value="low">Low</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </Select>
+          </div>
+          {error && <p className="mt-2 text-[12.5px] text-rose-600">{error}</p>}
+          <Button
+            className="mt-3" variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />}
+            disabled={!form.parameter_name || !form.value}
+            loading={addResult.isPending}
+            onClick={submit}
+          >
+            Add Result
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 const FILTERS = ['All', 'Ordered', 'Sample Collected', 'In Progress', 'Report Ready', 'Delivered'];
 const STATUS_MAP: Record<string, LabOrderStatus> = {
@@ -61,6 +139,7 @@ export function Laboratory() {
   const { toast } = useApp();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('All');
+  const [resultsOrder, setResultsOrder] = useState<{ id: string; label: string } | null>(null);
 
   const ordersQuery = useLabOrders();
   const catalogueQuery = useLabTestCatalogue();
@@ -77,6 +156,7 @@ export function Laboratory() {
     () =>
       (ordersQuery.data ?? []).map((o) => ({
         id: o.order_number,
+        orderId: o.id as string | null,
         test: o.test_name,
         patient: patientNameById[o.patient_id] ?? 'Unknown patient',
         patientId: null as string | null,
@@ -97,7 +177,9 @@ export function Laboratory() {
     : LAB_TEST_CATALOGUE;
 
   const rows = useMemo(() => {
-    const base = hasRealData ? realRows : LAB_ORDERS.map((o) => ({ ...o, patientId: o.patientId ?? null, externalLab: o.externalLab ?? null }));
+    const base = hasRealData
+      ? realRows
+      : LAB_ORDERS.map((o) => ({ ...o, orderId: null as string | null, patientId: o.patientId ?? null, externalLab: o.externalLab ?? null }));
     let r = base;
     if (filter !== 'All') r = r.filter((o) => o.status === filter);
     if (q.trim()) {
@@ -109,6 +191,12 @@ export function Laboratory() {
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
+      <LabResultsModal
+        orderId={resultsOrder?.id ?? null}
+        orderLabel={resultsOrder?.label ?? ''}
+        open={!!resultsOrder}
+        onClose={() => setResultsOrder(null)}
+      />
       <SectionTitle
         eyebrow="Operations"
         title="Laboratory Management"
@@ -198,11 +286,18 @@ export function Laboratory() {
                       {o.status}
                     </Badge>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-400">
-                    <span>Ordered by {o.orderedBy}</span>
-                    <span className="tnum">{o.orderedOn}</span>
-                    <span>{o.sampleType}</span>
-                    {o.externalLab && <span>{o.externalLab}</span>}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-400">
+                      <span>Ordered by {o.orderedBy}</span>
+                      <span className="tnum">{o.orderedOn}</span>
+                      <span>{o.sampleType}</span>
+                      {o.externalLab && <span>{o.externalLab}</span>}
+                    </div>
+                    {o.orderId && (
+                      <Button size="sm" icon={<ListChecks className="h-3.5 w-3.5" />} onClick={() => setResultsOrder({ id: o.orderId!, label: `${o.id} · ${o.test}` })}>
+                        Results
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

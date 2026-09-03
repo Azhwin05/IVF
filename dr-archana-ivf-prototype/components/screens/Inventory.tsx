@@ -4,11 +4,57 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import { INVENTORY_ITEMS, PURCHASE_ORDERS, INVENTORY_METRICS, type StatusTone } from '@/lib/data';
 import { cn, formatINR, TONE } from '@/lib/utils';
-import { Card, CardHeader, Badge, Button, SectionTitle, Input, Tabs } from '@/components/ui/primitives';
+import { Card, CardHeader, Badge, Button, SectionTitle, Input, Tabs, Modal } from '@/components/ui/primitives';
 import { useCountUp } from '@/lib/hooks';
-import { useInventoryItems, type InventoryCategory } from '@/lib/api/inventory';
+import { useInventoryItems, useReserveStock, type InventoryCategory } from '@/lib/api/inventory';
 import { usePurchaseOrders } from '@/lib/api/purchasing';
-import { Boxes, Search, AlertTriangle, Snowflake, IndianRupee, Plus, MapPin, Truck } from 'lucide-react';
+import { ApiError } from '@/lib/api/client';
+import { Boxes, Search, AlertTriangle, Snowflake, IndianRupee, Plus, MapPin, Truck, PackageCheck } from 'lucide-react';
+
+function ReserveStockModal({ item, open, onClose }: { item: { id: string; name: string; unit: string; availableQty: number } | null; open: boolean; onClose: () => void }) {
+  const { toast } = useApp();
+  const reserve = useReserveStock();
+  const [quantity, setQuantity] = useState('');
+  const [procedureType, setProcedureType] = useState('');
+  const [procedureId, setProcedureId] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => { setQuantity(''); setProcedureType(''); setProcedureId(''); setError(null); };
+
+  const submit = () => {
+    if (!item) return;
+    setError(null);
+    reserve.mutate(
+      { item_id: item.id, quantity: Number(quantity), procedure_entity_type: procedureType, procedure_entity_id: procedureId },
+      {
+        onSuccess: () => { toast({ title: 'Stock reserved', body: `${quantity} ${item.unit} of ${item.name} held.`, tone: 'success' }); reset(); onClose(); },
+        onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not reserve stock.'),
+      }
+    );
+  };
+
+  return (
+    <Modal open={open} onClose={() => { reset(); onClose(); }} title="Reserve Stock" subtitle={item ? `${item.name} — ${item.availableQty} ${item.unit} available` : ''}>
+      <div className="space-y-4">
+        <Input label="Quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+        <Input label="Procedure Type" placeholder="e.g. OTProcedure, IVFCycle" value={procedureType} onChange={(e) => setProcedureType(e.target.value)} />
+        <Input label="Procedure Reference" placeholder="Procedure/cycle ID" value={procedureId} onChange={(e) => setProcedureId(e.target.value)} />
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+            <p className="text-[13.5px] leading-relaxed text-rose-700">{error}</p>
+          </div>
+        )}
+      </div>
+      <div className="mt-5 flex justify-end gap-2">
+        <Button onClick={() => { reset(); onClose(); }}>Cancel</Button>
+        <Button variant="primary" loading={reserve.isPending} disabled={!quantity || !procedureType || !procedureId} onClick={submit}>
+          {reserve.isPending ? 'Reserving…' : 'Reserve'}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
 
 const CATEGORIES = ['All', 'IVF Consumables', 'Cryogenic Supplies', 'Lab Supplies', 'Surgical Equipment'];
 const CATEGORY_TO_REAL: Record<string, InventoryCategory> = {
@@ -58,6 +104,7 @@ export function Inventory() {
   const [tab, setTab] = useState('stock');
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('All');
+  const [reserveItem, setReserveItem] = useState<{ id: string; name: string; unit: string; availableQty: number } | null>(null);
 
   const itemsQuery = useInventoryItems();
   const ordersQuery = usePurchaseOrders();
@@ -73,6 +120,8 @@ export function Inventory() {
           name: it.name,
           category: REAL_TO_CATEGORY[it.category],
           stock: it.stock,
+          reservedQty: it.reserved_qty,
+          availableQty: it.available_qty,
           unit: it.unit,
           reorderLevel: it.reorder_level,
           location: it.location ?? '—',
@@ -101,7 +150,7 @@ export function Inventory() {
   );
 
   const items = useMemo(() => {
-    let r = hasRealItems ? realItems : INVENTORY_ITEMS;
+    let r = hasRealItems ? realItems : INVENTORY_ITEMS.map((i) => ({ ...i, reservedQty: 0, availableQty: i.stock }));
     if (cat !== 'All') r = r.filter((i) => i.category === cat);
     if (q.trim()) {
       const t = q.toLowerCase();
@@ -114,6 +163,7 @@ export function Inventory() {
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
+      <ReserveStockModal item={reserveItem} open={!!reserveItem} onClose={() => setReserveItem(null)} />
       <SectionTitle
         eyebrow="Operations"
         title="Inventory Management"
@@ -202,7 +252,18 @@ export function Inventory() {
                       <Truck className="h-3 w-3 shrink-0" /> {it.supplier}
                     </p>
                     <p className="tnum">Restocked {it.lastRestocked} · Reorder at {it.reorderLevel}</p>
+                    {it.reservedQty > 0 && (
+                      <p className="tnum text-amber-700">{it.reservedQty} {it.unit} reserved · {it.availableQty} available</p>
+                    )}
                   </div>
+                  {hasRealItems && (
+                    <Button
+                      size="sm" className="mt-3 w-full" icon={<PackageCheck className="h-3.5 w-3.5" />}
+                      onClick={() => setReserveItem({ id: it.id, name: it.name, unit: it.unit, availableQty: it.availableQty })}
+                    >
+                      Reserve for Procedure
+                    </Button>
+                  )}
                 </Card>
               ))}
             </div>

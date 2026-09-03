@@ -18,6 +18,9 @@ import { usePatientConsultations } from '@/lib/api/clinical';
 import { useLabOrders, type LabOrderStatus } from '@/lib/api/laboratory';
 import { useActiveCycle } from '@/lib/api/ivf';
 import { useInvoices } from '@/lib/api/billing';
+import { usePrescriptions, useCreatePrescription, type PrescriptionLineCreate } from '@/lib/api/prescription';
+import { useConsentForms, useCreateConsentForm, useSignConsentForm, useMRDRecords, useCreateMRDRecord } from '@/lib/api/clinicalDocuments';
+import { ApiError } from '@/lib/api/client';
 import { cn, TONE, formatINR, ageFromDOB, initialsOf } from '@/lib/utils';
 import {
   Card,
@@ -31,6 +34,9 @@ import {
   InfoNote,
   ProgressBar,
   ActionRow,
+  Modal,
+  Input,
+  Select,
 } from '@/components/ui/primitives';
 import { GrowthChart } from '@/components/ui/charts';
 import {
@@ -55,6 +61,9 @@ import {
   TrendingUp,
   FolderOpen,
   Download,
+  Plus,
+  Trash2,
+  PenLine,
 } from 'lucide-react';
 
 const STATIC_DOCUMENTS = [
@@ -202,6 +211,301 @@ export function PatientHeader({ compact }: { compact?: boolean }) {
 }
 
 /* ============================================================
+   WRITE PRESCRIPTION MODAL
+   ============================================================ */
+function WritePrescriptionModal({ patientId, open, onClose }: { patientId: string | null; open: boolean; onClose: () => void }) {
+  const [category, setCategory] = useState('');
+  const [notes, setNotes] = useState('');
+  const [lines, setLines] = useState<PrescriptionLineCreate[]>([
+    { medicine_name: '', dosage: '', frequency: '', timing: '', duration: '', instructions: '' },
+  ]);
+  const createPrescription = useCreatePrescription();
+
+  const updateLine = (i: number, patch: Partial<PrescriptionLineCreate>) =>
+    setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+
+  const reset = () => {
+    setCategory('');
+    setNotes('');
+    setLines([{ medicine_name: '', dosage: '', frequency: '', timing: '', duration: '', instructions: '' }]);
+    createPrescription.reset();
+  };
+
+  const canSubmit = !!patientId && lines.every((l) => l.medicine_name.trim() && l.dosage.trim() && l.frequency.trim());
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title="Write Prescription"
+      subtitle="Add one or more medicine lines for this patient"
+      width="max-w-2xl"
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          {createPrescription.isError && (
+            <p className="text-[13px] text-rose-600">
+              {createPrescription.error instanceof ApiError ? createPrescription.error.message : 'Failed to save prescription.'}
+            </p>
+          )}
+          <div className="ml-auto flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                reset();
+                onClose();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!canSubmit || createPrescription.isPending}
+              loading={createPrescription.isPending}
+              onClick={() => {
+                if (!patientId) return;
+                createPrescription.mutate(
+                  { patient_id: patientId, category: category.trim() || null, notes: notes.trim() || null, lines },
+                  {
+                    onSuccess: () => {
+                      reset();
+                      onClose();
+                    },
+                  }
+                );
+              }}
+            >
+              Save Prescription
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <Input label="Category (optional)" placeholder="e.g. Stimulation, Luteal support" value={category} onChange={(e) => setCategory(e.target.value)} />
+
+        <div className="space-y-3">
+          {lines.map((l, i) => (
+            <div key={i} className="rounded-xl border border-ink-200 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[12.5px] font-semibold uppercase tracking-[0.06em] text-ink-400">Medicine {i + 1}</p>
+                {lines.length > 1 && (
+                  <button
+                    className="text-ink-400 hover:text-rose-600"
+                    onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input label="Medicine name" value={l.medicine_name} onChange={(e) => updateLine(i, { medicine_name: e.target.value })} />
+                <Input label="Dosage" placeholder="e.g. 250 IU" value={l.dosage} onChange={(e) => updateLine(i, { dosage: e.target.value })} />
+                <Input label="Frequency" placeholder="e.g. Once daily" value={l.frequency} onChange={(e) => updateLine(i, { frequency: e.target.value })} />
+                <Input label="Timing (optional)" placeholder="e.g. Morning" value={l.timing ?? ''} onChange={(e) => updateLine(i, { timing: e.target.value })} />
+                <Input label="Duration (optional)" placeholder="e.g. 10 days" value={l.duration ?? ''} onChange={(e) => updateLine(i, { duration: e.target.value })} />
+                <Input label="Instructions (optional)" placeholder="e.g. Subcutaneous" value={l.instructions ?? ''} onChange={(e) => updateLine(i, { instructions: e.target.value })} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Button
+          size="sm"
+          icon={<Plus className="h-4 w-4" />}
+          onClick={() => setLines((ls) => [...ls, { medicine_name: '', dosage: '', frequency: '', timing: '', duration: '', instructions: '' }])}
+        >
+          Add another medicine
+        </Button>
+
+        <Input label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+    </Modal>
+  );
+}
+
+/* ============================================================
+   NEW CONSENT FORM MODAL
+   ============================================================ */
+function NewConsentFormModal({ patientId, open, onClose }: { patientId: string | null; open: boolean; onClose: () => void }) {
+  const [formType, setFormType] = useState('IVF Treatment Consent');
+  const [content, setContent] = useState('');
+  const createConsentForm = useCreateConsentForm();
+
+  const reset = () => {
+    setFormType('IVF Treatment Consent');
+    setContent('');
+    createConsentForm.reset();
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title="New Consent Form"
+      subtitle="Create a consent form draft for this patient to review and sign"
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          {createConsentForm.isError && (
+            <p className="text-[13px] text-rose-600">
+              {createConsentForm.error instanceof ApiError ? createConsentForm.error.message : 'Failed to create consent form.'}
+            </p>
+          )}
+          <div className="ml-auto flex gap-2">
+            <Button variant="ghost" onClick={() => { reset(); onClose(); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!patientId || !content.trim() || createConsentForm.isPending}
+              loading={createConsentForm.isPending}
+              onClick={() => {
+                if (!patientId) return;
+                createConsentForm.mutate(
+                  { patient_id: patientId, form_type: formType, content },
+                  { onSuccess: () => { reset(); onClose(); } }
+                );
+              }}
+            >
+              Create Draft
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <Select label="Form type" value={formType} onChange={(e) => setFormType(e.target.value)}>
+          <option>IVF Treatment Consent</option>
+          <option>ICSI Procedure Consent</option>
+          <option>Cryopreservation Consent</option>
+          <option>Donor Gamete Consent</option>
+          <option>Anaesthesia Consent</option>
+        </Select>
+        <label className="block">
+          <span className="mb-1.5 block text-[13.5px] font-medium text-ink-700">Content</span>
+          <textarea
+            className="min-h-[140px] w-full rounded-lg border border-ink-200 bg-white p-3 text-[14px] text-ink-900"
+            placeholder="Enter the consent form text the patient will review and sign…"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+          />
+        </label>
+      </div>
+    </Modal>
+  );
+}
+
+/* ============================================================
+   NEW MRD RECORD MODAL
+   ============================================================ */
+function NewMRDRecordModal({ patientId, open, onClose }: { patientId: string | null; open: boolean; onClose: () => void }) {
+  const [recordType, setRecordType] = useState('Registration');
+  const [notes, setNotes] = useState('');
+  const createMRDRecord = useCreateMRDRecord();
+
+  const reset = () => {
+    setRecordType('Registration');
+    setNotes('');
+    createMRDRecord.reset();
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => { reset(); onClose(); }}
+      title="New MRD Record"
+      subtitle="Add a Medical Records Department entry for this patient"
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          {createMRDRecord.isError && (
+            <p className="text-[13px] text-rose-600">
+              {createMRDRecord.error instanceof ApiError ? createMRDRecord.error.message : 'Failed to create MRD record.'}
+            </p>
+          )}
+          <div className="ml-auto flex gap-2">
+            <Button variant="ghost" onClick={() => { reset(); onClose(); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!patientId || !notes.trim() || createMRDRecord.isPending}
+              loading={createMRDRecord.isPending}
+              onClick={() => {
+                if (!patientId) return;
+                createMRDRecord.mutate(
+                  { patient_id: patientId, record_type: recordType, fields: { notes } },
+                  { onSuccess: () => { reset(); onClose(); } }
+                );
+              }}
+            >
+              Save Record
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <Select label="Record type" value={recordType} onChange={(e) => setRecordType(e.target.value)}>
+          <option>Registration</option>
+          <option>Correction Request</option>
+          <option>Retrieval Log</option>
+          <option>Disposal Notice</option>
+        </Select>
+        <label className="block">
+          <span className="mb-1.5 block text-[13.5px] font-medium text-ink-700">Notes</span>
+          <textarea
+            className="min-h-[100px] w-full rounded-lg border border-ink-200 bg-white p-3 text-[14px] text-ink-900"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </label>
+      </div>
+    </Modal>
+  );
+}
+
+/* ============================================================
+   CONSENT FORM ROW
+   ============================================================ */
+function ConsentFormRow({
+  form,
+  style,
+}: {
+  form: { id: string; form_type: string; status: 'draft' | 'signed' | 'withdrawn'; signed_at: string | null; created_at: string };
+  style?: React.CSSProperties;
+}) {
+  const signConsentForm = useSignConsentForm();
+  const tone = form.status === 'signed' ? 'completed' : form.status === 'withdrawn' ? 'critical' : 'attention';
+  return (
+    <div style={style} className="flex items-center justify-between gap-4 px-5 py-3">
+      <div className="min-w-0">
+        <p className="text-[13.5px] font-semibold text-ink-900">{form.form_type}</p>
+        <p className="text-[12.5px] text-ink-500">
+          {form.status === 'signed' && form.signed_at
+            ? `Signed ${new Date(form.signed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+            : `Created ${new Date(form.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Badge tone={tone} size="sm">
+          {form.status}
+        </Badge>
+        {form.status === 'draft' && (
+          <Button size="sm" loading={signConsentForm.isPending} onClick={() => signConsentForm.mutate(form.id)}>
+            Mark Signed
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
    WORKSPACE
    ============================================================ */
 export function Workspace() {
@@ -215,6 +519,12 @@ export function Workspace() {
   const activeCycleQuery = useActiveCycle(coupleQuery.data?.id ?? null);
   const documentsQuery = usePatientDocuments(selectedPatientId);
   const invoicesQuery = useInvoices(selectedPatientId);
+  const prescriptionsQuery = usePrescriptions(selectedPatientId);
+  const consentFormsQuery = useConsentForms(selectedPatientId);
+  const mrdRecordsQuery = useMRDRecords(selectedPatientId);
+  const [writePrescriptionOpen, setWritePrescriptionOpen] = useState(false);
+  const [newConsentOpen, setNewConsentOpen] = useState(false);
+  const [newMrdOpen, setNewMrdOpen] = useState(false);
 
   const hasRealConsultations = (consultationsQuery.data ?? []).length > 0;
   const realConsultations = useMemo(
@@ -279,13 +589,16 @@ export function Workspace() {
     { id: 'consultations', label: 'Consultations', count: consultations.length },
     { id: 'investigations', label: 'Investigations', count: hasRealInvestigations ? realInvestigations.length : INVESTIGATIONS.length },
     { id: 'cycle', label: 'IVF Cycle' },
-    { id: 'prescriptions', label: 'Prescriptions', count: medications.length },
+    { id: 'prescriptions', label: 'Prescriptions', count: (prescriptionsQuery.data ?? []).length || medications.length },
     { id: 'documents', label: 'Documents' },
     { id: 'billing', label: 'Billing' },
   ];
 
   return (
     <div className="screen-enter mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6 lg:p-8">
+      <WritePrescriptionModal patientId={selectedPatientId} open={writePrescriptionOpen} onClose={() => setWritePrescriptionOpen(false)} />
+      <NewConsentFormModal patientId={selectedPatientId} open={newConsentOpen} onClose={() => setNewConsentOpen(false)} />
+      <NewMRDRecordModal patientId={selectedPatientId} open={newMrdOpen} onClose={() => setNewMrdOpen(false)} />
       <PatientHeader />
 
       <Card className="overflow-hidden">
@@ -628,50 +941,153 @@ export function Workspace() {
 
           {/* ---------------- PRESCRIPTIONS ---------------- */}
           {tab === 'prescriptions' && (
-            <div className="animate-fade-up stagger space-y-2.5">
-              {medications.map((m, i) => (
-                <Card key={m.name} style={{ ['--i' as string]: i }} className="flex flex-wrap items-center gap-4 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-                    <Pill className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14.5px] font-semibold text-ink-900">
-                      {m.name} <span className="tnum font-normal text-ink-500">· {m.dose}</span>
-                    </p>
-                    <p className="text-[13px] text-ink-500">{m.route}</p>
-                  </div>
-                  {m.since !== '—' && <span className="text-[13px] text-ink-500">Since {m.since}</span>}
-                  <Badge tone={m.tone} size="sm">
-                    {m.status}
-                  </Badge>
-                </Card>
-              ))}
+            <div className="animate-fade-up space-y-4">
+              <div className="flex justify-end">
+                <Button
+                  variant="primary"
+                  icon={<PenLine className="h-4 w-4" />}
+                  onClick={() => setWritePrescriptionOpen(true)}
+                  disabled={!selectedPatientId}
+                >
+                  Write Prescription
+                </Button>
+              </div>
+
+              {(prescriptionsQuery.data ?? []).length > 0 ? (
+                <div className="stagger space-y-3">
+                  {(prescriptionsQuery.data ?? []).map((p, i) => (
+                    <Card key={p.id} style={{ ['--i' as string]: i }} className="p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-[13px] font-semibold text-ink-500">
+                          {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {p.category && <span className="text-ink-400"> · {p.category}</span>}
+                        </p>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {p.lines.map((l) => (
+                          <div key={l.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-ink-50/70 px-3 py-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+                              <Pill className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13.5px] font-semibold text-ink-900">
+                                {l.medicine_name} <span className="tnum font-normal text-ink-500">· {l.dosage}</span>
+                              </p>
+                              <p className="text-[12.5px] text-ink-500">
+                                {l.frequency}
+                                {l.timing ? ` · ${l.timing}` : ''}
+                                {l.duration ? ` · ${l.duration}` : ''}
+                              </p>
+                              {l.instructions && <p className="text-[12px] text-ink-400">{l.instructions}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {p.notes && <p className="mt-2 text-[12.5px] text-ink-500">Notes: {p.notes}</p>}
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="stagger space-y-2.5">
+                  {medications.map((m, i) => (
+                    <Card key={m.name} style={{ ['--i' as string]: i }} className="flex flex-wrap items-center gap-4 p-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                        <Pill className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14.5px] font-semibold text-ink-900">
+                          {m.name} <span className="tnum font-normal text-ink-500">· {m.dose}</span>
+                        </p>
+                        <p className="text-[13px] text-ink-500">{m.route}</p>
+                      </div>
+                      {m.since !== '—' && <span className="text-[13px] text-ink-500">Since {m.since}</span>}
+                      <Badge tone={m.tone} size="sm">
+                        {m.status}
+                      </Badge>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {/* ---------------- DOCUMENTS ---------------- */}
           {tab === 'documents' && (
-            <div className="animate-fade-up stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {documents.length === 0 && (
-                <p className="col-span-full px-1 py-8 text-center text-[14px] text-ink-500">No documents uploaded yet for this patient.</p>
-              )}
-              {documents.map((d, i) => (
-                <Card key={d.name} style={{ ['--i' as string]: i }} interactive className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink-100 text-ink-500">
-                      <FolderOpen className="h-5 w-5" />
+            <div className="animate-fade-up space-y-6">
+              <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {documents.length === 0 && (
+                  <p className="col-span-full px-1 py-8 text-center text-[14px] text-ink-500">No documents uploaded yet for this patient.</p>
+                )}
+                {documents.map((d, i) => (
+                  <Card key={d.name} style={{ ['--i' as string]: i }} interactive className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink-100 text-ink-500">
+                        <FolderOpen className="h-5 w-5" />
+                      </div>
+                      {d.signed && <Badge tone="completed" size="sm">Signed</Badge>}
                     </div>
-                    {d.signed && <Badge tone="completed" size="sm">Signed</Badge>}
-                  </div>
-                  <p className="mt-3 text-[14px] font-semibold leading-snug text-ink-900">{d.name}</p>
-                  <p className="mt-1 text-[12.5px] text-ink-500">
-                    {d.date} · {d.size}
-                  </p>
-                  <button className="mt-2.5 flex items-center gap-1 text-[12.5px] font-medium text-brand-700 hover:text-brand-800">
-                    <Download className="h-3 w-3" /> Download
-                  </button>
-                </Card>
-              ))}
+                    <p className="mt-3 text-[14px] font-semibold leading-snug text-ink-900">{d.name}</p>
+                    <p className="mt-1 text-[12.5px] text-ink-500">
+                      {d.date} · {d.size}
+                    </p>
+                    <button className="mt-2.5 flex items-center gap-1 text-[12.5px] font-medium text-brand-700 hover:text-brand-800">
+                      <Download className="h-3 w-3" /> Download
+                    </button>
+                  </Card>
+                ))}
+              </div>
+
+              <Card>
+                <CardHeader
+                  icon={<ShieldCheck className="h-4 w-4" />}
+                  title="Consent Forms"
+                  subtitle={`${(consentFormsQuery.data ?? []).length} forms on record`}
+                  action={
+                    <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setNewConsentOpen(true)} disabled={!selectedPatientId}>
+                      New Consent Form
+                    </Button>
+                  }
+                />
+                <div className="stagger divide-y divide-ink-100">
+                  {(consentFormsQuery.data ?? []).length === 0 && (
+                    <p className="px-5 py-8 text-center text-[14px] text-ink-500">No consent forms recorded for this patient yet.</p>
+                  )}
+                  {(consentFormsQuery.data ?? []).map((f, i) => (
+                    <ConsentFormRow key={f.id} form={f} style={{ ['--i' as string]: i }} />
+                  ))}
+                </div>
+              </Card>
+
+              <Card>
+                <CardHeader
+                  icon={<FileText className="h-4 w-4" />}
+                  title="MRD Records"
+                  subtitle={`${(mrdRecordsQuery.data ?? []).length} records on file`}
+                  action={
+                    <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setNewMrdOpen(true)} disabled={!selectedPatientId}>
+                      New MRD Record
+                    </Button>
+                  }
+                />
+                <div className="stagger divide-y divide-ink-100">
+                  {(mrdRecordsQuery.data ?? []).length === 0 && (
+                    <p className="px-5 py-8 text-center text-[14px] text-ink-500">No MRD records on file for this patient yet.</p>
+                  )}
+                  {(mrdRecordsQuery.data ?? []).map((r, i) => (
+                    <div key={r.id} style={{ ['--i' as string]: i }} className="flex items-center justify-between gap-4 px-5 py-3">
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-semibold text-ink-900">{r.record_type}</p>
+                        <p className="truncate text-[12.5px] text-ink-500">
+                          {typeof r.fields?.notes === 'string' ? r.fields.notes : JSON.stringify(r.fields)}
+                        </p>
+                      </div>
+                      <span className="tnum shrink-0 text-[12.5px] text-ink-400">
+                        {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             </div>
           )}
 
