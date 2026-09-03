@@ -121,6 +121,7 @@ from app.inventory.router import router as inventory_router
 from app.ivf.router import router as ivf_router
 from app.laboratory.router import router as laboratory_router
 from app.maintenance.router import router as maintenance_router
+from app.messaging.router import router as messaging_router
 from app.notifications.router import router as notifications_router
 from app.ot.router import router as ot_router
 from app.patients.documents import router as patient_documents_router
@@ -141,6 +142,6 @@ for router in (
     pharmacy_router, inventory_router, purchasing_router, billing_router, accounting_router,
     assets_router, maintenance_router, quality_router, hr_router,
     notifications_router, printing_router, reports_router, administration_router, audit_router,
-    donor_router, prescription_router, clinical_documents_router,
+    donor_router, prescription_router, clinical_documents_router, messaging_router,
 ):
     app.include_router(router, prefix=settings.API_V1_PREFIX)

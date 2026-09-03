@@ -101,6 +101,8 @@ PERMISSIONS: list[tuple[str, str, str, bool]] = [
     ("reports.export", "reports", "Export reports", False),
     # Audit
     ("audit.read", "audit", "View the audit log", True),
+    # Messaging — new module, source doc §26-27
+    ("messaging.send", "messaging", "Send WhatsApp/SMS messages and view message history", False),
     # Donor management — new module, source doc §22-23
     ("donor.read", "donor", "View donor records and matching history", False),
     ("donor.write", "donor", "Register donors and record benchmarks", False),
@@ -139,6 +141,7 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "patients.read", "patients.create", "patients.sensitive_documents",
         "appointments.read", "appointments.create", "appointments.checkin", "appointments.cancel",
         "billing.read", "billing.create", "billing.payment",
+        "messaging.send",
     ]),
     "embryologist": ("Embryologist", [
         "patients.read",
