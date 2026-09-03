@@ -10,6 +10,7 @@ from app.audit import models as _audit_models  # noqa: F401
 from app.auth import models as _auth_models  # noqa: F401
 from app.billing import models as _billing_models  # noqa: F401
 from app.clinical import models as _clinical_models  # noqa: F401
+from app.clinical_documents import models as _clinical_documents_models  # noqa: F401
 from app.core.idempotency import IdempotencyRecord  # noqa: F401
 from app.cryostorage import models as _cryostorage_models  # noqa: F401
 from app.donor import models as _donor_models  # noqa: F401
@@ -24,6 +25,7 @@ from app.notifications import models as _notifications_models  # noqa: F401
 from app.ot import models as _ot_models  # noqa: F401
 from app.patients import models as _patients_models  # noqa: F401
 from app.pharmacy import models as _pharmacy_models  # noqa: F401
+from app.prescription import models as _prescription_models  # noqa: F401
 from app.printing import models as _printing_models  # noqa: F401
 from app.purchasing import models as _purchasing_models  # noqa: F401
 from app.quality import models as _quality_models  # noqa: F401

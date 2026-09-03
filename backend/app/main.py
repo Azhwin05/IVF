@@ -112,6 +112,7 @@ from app.audit.router import router as audit_router
 from app.auth.router import router as auth_router
 from app.billing.router import router as billing_router
 from app.clinical.router import router as clinical_router
+from app.clinical_documents.router import router as clinical_documents_router
 from app.cryostorage.router import router as cryostorage_router
 from app.donor.router import router as donor_router
 from app.embryology.router import router as embryology_router
@@ -125,6 +126,7 @@ from app.ot.router import router as ot_router
 from app.patients.documents import router as patient_documents_router
 from app.patients.router import router as patients_router
 from app.pharmacy.router import router as pharmacy_router
+from app.prescription.router import router as prescription_router
 from app.printing.router import router as printing_router
 from app.purchasing.router import router as purchasing_router
 from app.quality.router import router as quality_router
@@ -139,6 +141,6 @@ for router in (
     pharmacy_router, inventory_router, purchasing_router, billing_router, accounting_router,
     assets_router, maintenance_router, quality_router, hr_router,
     notifications_router, printing_router, reports_router, administration_router, audit_router,
-    donor_router,
+    donor_router, prescription_router, clinical_documents_router,
 ):
     app.include_router(router, prefix=settings.API_V1_PREFIX)

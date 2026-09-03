@@ -53,3 +53,15 @@ async def performance(
     _: User = Depends(require_permission("reports.read")),
 ) -> list[dict]:
     return await service.doctor_performance(session)
+
+
+@router.get("/discharge-summary/{patient_id}")
+async def discharge_summary(
+    patient_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission("clinical.read")),
+) -> dict:
+    """New requirement (source doc §21) — gated on clinical.read (not
+    reports.read) since this is patient clinical data, not an operational
+    report; doctors and nurses need it, not just management/accounting."""
+    return await service.discharge_summary(session, patient_id)
