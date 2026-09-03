@@ -26,14 +26,14 @@ None of these users are technical. The UI has to be obvious, not clever. Keep th
 ```
 D:\IVF\
 ├── backend/                      FastAPI + PostgreSQL — the real system of record
-│   └── app/                      31 modules (see §4)
+│   └── app/                      33 modules (see §4)
 ├── dr-archana-ivf-prototype/     Next.js 15 frontend — the UI staff actually uses
 ├── docker-compose.yml            Base service definitions
 ├── docker-compose.dev.yml        Local dev overrides (host port publishing)
 └── .env                          Local secrets/config — gitignored, ask for a copy
 ```
 
-**Important history, so nobody is confused reading old files in the repo:** this started life as a pure front-end *visual prototype* — every screen was wired to hardcoded fake data, there was no server at all. A backend was then built from scratch and the frontend was rewired screen-by-screen to call it. **That rewiring is now complete** — all 23 screens read and write real data. A few stray docs at the repo root (`README.md`, `ARCHITECTURE.md`, `PROJECT_SUMMARY.md`, etc.) describe the *old, backend-less* state and are now **stale — do not trust them**. This document supersedes them. (Worth a cleanup task: archive or delete those files so nobody else gets confused — see §9.)
+**Important history, so nobody is confused reading old files in the repo:** this started life as a pure front-end *visual prototype* — every screen was wired to hardcoded fake data, there was no server at all. A backend was then built from scratch and the frontend was rewired screen-by-screen to call it. **That rewiring is now complete** — all 25 screens read and write real data. The docs describing that old, backend-less state have been moved to `docs/archive/` and should not be trusted; see `docs/archive/README.md` for what each one was superseded by. The current docs are `README.md`, `CLAUDE.md`, this file, and `NEW_FEATURES_GAP_ANALYSIS.md`.
 
 ---
 
@@ -70,7 +70,7 @@ Everything runs in Docker Compose locally (`postgres`, `redis`, `minio`, `api`, 
 
 ## 4. Backend architecture — modular monolith
 
-One FastAPI app, one Postgres database, but internally split into **31 self-contained modules** under `backend/app/`, each typically with `models.py`, `schemas.py`, `service.py`, `router.py`. This is the seam you'll assign work along — a developer can own a module end-to-end without touching another's files.
+One FastAPI app, one Postgres database, but internally split into **33 self-contained modules** under `backend/app/`, each typically with `models.py`, `schemas.py`, `service.py`, `router.py`. This is the seam you'll assign work along — a developer can own a module end-to-end without touching another's files.
 
 ```
 auth            patients        appointments     clinical
@@ -92,9 +92,9 @@ Cross-cutting rules every module follows (enforce these in review):
 
 Auth flow specifics a new dev needs day one: access token lives in memory only on the frontend (lost on refresh, hence a silent-refresh-on-mount flow using the httpOnly cookie); a `token_expired` 401 triggers exactly one deduped refresh + retry (`lib/api/client.ts`) before logging the user out.
 
-Migrations: Alembic, 2 revisions so far (`c9f299fef0e3_initial_schema`, `e4a6fc4335ac_widen_blood_group_column`). `backend/scripts/seed_db.py` seeds roles/permissions, demo staff, and clinic-wide master data (medicines, inventory, lab test catalogue, procedure charges, packages) unconditionally; pass `--with-demo-data` to also seed a full demo patient story (Priya Raman / Arjun Kumar) for showing the app end-to-end.
+Migrations: Alembic, 6 revisions so far (initial schema, blood-group widening, donor management, WhatsApp/SMS messaging, prescriptions/consent/MRD, and print-history features). `backend/scripts/seed_db.py` seeds roles/permissions, demo staff, and clinic-wide master data (medicines, inventory, lab test catalogue, procedure charges, packages) unconditionally; pass `--with-demo-data` to also seed a full demo patient story (Priya Raman / Arjun Kumar) for showing the app end-to-end.
 
-Tests: `backend/tests/` — 6 files, run via `pytest -q` inside the `api` container. Currently 17 passing. This is thin for 31 modules — **growing test coverage is a good first assignment for a new backend dev**, module by module.
+Tests: `backend/tests/` — 7 files, run via `pytest -q` inside the `api` container. Currently 25 passing. This is thin for 33 modules — **growing test coverage is a good first assignment for a new backend dev**, module by module.
 
 ---
 
@@ -105,12 +105,13 @@ dr-archana-ivf-prototype/
 ├── app/                 Next.js App Router shell (single page, globals.css)
 ├── components/
 │   ├── layout/           AppShell, Sidebar, Topbar, CommandPalette, nav config
-│   ├── screens/           23 screens, one per business area (Dashboard, Patients,
-│   │                       Workspace, Monitoring, Plan, Embryology, Cryostorage,
-│   │                       Transfer, Pregnancy, Laboratory, Pharmacy, Inventory,
-│   │                       Billing, Accounting, Staff, Reports, Audit,
-│   │                       Administration, Timeline, Registration, Appointments,
-│   │                       Access, Login)
+│   ├── screens/           25 screens + Login, one per business area (Dashboard,
+│   │                       Patients, Workspace, Monitoring, Plan, Embryology,
+│   │                       Cryostorage, Transfer, Pregnancy, Laboratory,
+│   │                       Pharmacy, Inventory, Billing, Accounting, Staff,
+│   │                       Reports, Audit, Administration, Timeline,
+│   │                       Registration, Appointments, Access, Donors,
+│   │                       Messaging, Settings, Login)
 │   └── ui/                Design-system primitives (Card, Button, Badge, Modal,
 │                            Tabs, Toast, Input, charts...) — reusable, screens
 │                            should compose these, not hand-roll their own buttons
@@ -140,14 +141,20 @@ const rows = hasRealData ? realRowsMappedFromApi : STATIC_FIXTURE;
 ```
 This exists because the demo clinic's seed data is sparse (2 patients, a handful of lab orders, etc.) — most real tables are empty in a fresh environment, and the client still needs to see a fully "alive" screen during demos. **Do not remove this pattern casually** — but also don't let it hide bugs: if `hasRealData` is `false` where you expect real rows, check the seed data and the query, don't assume it's "supposed to" fall back.
 
-### Accessibility layer (just added, read before touching UI)
+### Accessibility & UI preferences (read before touching UI)
 
 The clinic explicitly asked for the UI to be usable by non-technical staff on monitors and iPads:
-- A **text-size control** ("Aa" in the top bar) — Standard/Large/Extra-large, persisted per-device via `localStorage`, applied with CSS `zoom` (not `transform`, so layout actually reflows) — see `components/layout/AppShell.tsx` (`TextScale` type) and `Topbar.tsx`.
-- Minimum 44px touch targets everywhere (Apple's guideline), enforced in `components/ui/primitives.tsx` — new buttons/icon-buttons must follow the existing size classes, don't reintroduce 28–32px icon buttons.
+
+- **Settings → User Interface** (`components/screens/Settings.tsx`) is where staff adjust the interface themselves. It is reachable from the user menu or by searching "interface" in the command palette, and is available to **every role** — these are personal preferences, not clinical permissions. Options: text size, display density, high contrast, reduced motion, menu section behaviour, whether the top bar shows a clock, and which screen opens after sign-in.
+- Preferences live in `lib/preferences.tsx` (React Context + `localStorage`) and are applied as **root-level CSS classes** by `preferenceClasses()` in `AppShell.tsx`. Density, contrast and motion styling lives in `app/globals.css`, so it reaches all 25 screens without per-screen work — **add new preference styling there, not in individual screens**.
+- Read preferences after mount, never in a `useState` initializer, or server and client render differently and React throws a hydration mismatch.
+- Text size uses CSS `zoom` (not `transform`, so layout actually reflows).
+- Minimum 44px touch targets everywhere (Apple's guideline), enforced in `components/ui/primitives.tsx` — new buttons/icon-buttons must follow the existing size classes, don't reintroduce 28–32px icon buttons. Density's compact mode deliberately tightens padding only, never font size and never the touch target.
 - Contrast-corrected neutral palette in `tailwind.config.ts` (`ink.400`/`ink.500` were darkened to meet WCAG AA).
-- `prefers-reduced-motion` respected globally in `app/globals.css`.
+- `prefers-reduced-motion` respected globally in `app/globals.css`, in addition to the in-app toggle (staff on shared iPads often can't change the OS setting).
 - Icon-only controls need `aria-label`; anything approve/reject-shaped (like the Staff leave-request actions) should be a labeled button, not a bare icon, for this user base.
+
+The top bar was deliberately reduced to five elements (back, title, search, notifications, user) and the sidebar pins a "Today" cluster with the rest collapsed by default. Both were done because staff found the fuller versions confusing. **Don't casually add controls back to the top bar** — if something needs a permanent home, prefer the user menu or Settings.
 
 ---
 
@@ -188,17 +195,17 @@ npm --prefix dr-archana-ivf-prototype run dev -- -p 3100
 ## 7. Current state — what's done, what's not
 
 **Done:**
-- Full backend: 31 modules, RBAC, audit trail, all migrations applied.
-- All 23 frontend screens wired to real endpoints with the fallback pattern described above.
+- Full backend: 33 modules, RBAC, audit trail, all migrations applied.
+- All 25 frontend screens wired to real endpoints with the fallback pattern described above.
 - Accessibility pass across the whole UI (text scaling, contrast, touch targets).
 - Basic auth flow (login, silent refresh, logout, permission-gated screens with a "Restricted" fallback view).
 
 **Not done / open (this is your backlog to triage and assign):**
-1. **Test coverage is thin.** 6 test files for 31 backend modules. No frontend tests at all.
+1. **Test coverage is thin.** 7 test files for 33 backend modules. No frontend tests at all.
 2. **No CI/CD.** No pipeline runs tests or typechecks on push. Set one up before the team grows past one dev at a time.
 3. **No production deployment.** Docker Compose is dev-only right now; `nginx`/`frontend` service stubs exist in `docker-compose.yml` but aren't the actual deploy path yet. Hosting, TLS, backups, and the production `.env` are all undecided.
 4. **Dead frontend dependencies** (`zustand`, `zod`, `react-hook-form`, `recharts`) — either remove or adopt deliberately; right now they're just confusing dead weight in `package.json`.
-5. **Stale root-level docs** (`README.md`, `ARCHITECTURE.md`, `PROJECT_SUMMARY.md`, `TECHNICAL_ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md`, `CLIENT_PRESENTATION_GUIDE.md`, `PROJECT_CONTEXT_PROMPT.md`, `Dr_Archana_IVF_Clinical_Operating_System_Prototype_Context.md`) describe the pre-backend prototype. Either delete them or clearly mark them archived so nobody onboards off the wrong doc again.
+5. ~~**Stale root-level docs.**~~ **Done** — moved to `docs/archive/` with a README explaining what superseded each. `README.md` was rewritten as an accurate front door, and `CLAUDE.md` was added for Claude Code.
 6. **Sparse seed data** means most screens are still demoing the static fallback in a fresh environment — fine for now, but worth knowing before you assume "the fallback rendering means the real wiring is broken."
 7. **Password policy isn't fully enforced end-to-end** (see login note above) — the `must_change_password` flag exists on every seeded account but the frontend doesn't currently force the rotation flow.
 
@@ -227,5 +234,5 @@ A useful rule when assigning: **whoever touches a backend endpoint should touch 
 1. Get local dev running (§6), log in as each of the 4 roles, click through every screen once.
 2. Read `backend/app/roles/seed.py` fully — it's the actual permission model, more authoritative than any doc.
 3. Pick **one** vertical slice from §8, read its module top to bottom (models → service → router → frontend hook → screen).
-4. Triage §7's open items into tickets, and archive/delete the stale root docs (quick win, immediately reduces confusion for whoever they hire next).
+4. Triage §7's open items into tickets.
 5. Stand up CI (typecheck + `pytest -q`) before adding a second developer to the repo — right now nothing stops a broken commit from landing on `main`.

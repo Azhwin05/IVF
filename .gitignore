@@ -35,7 +35,10 @@ tsconfig.tsbuildinfo
 
 # Editor / tooling
 .vscode
-.claude
+# Claude Code: share the dev-server config (it pins the port 3100 that
+# CORS depends on), keep personal settings and worktrees local.
+.claude/*
+!.claude/launch.json
 
 # Backend runtime state
 backend/celerybeat-schedule

@@ -1,458 +1,144 @@
-# 🏥 Dr. Archana IVF Clinical Operating System
-## Complete Prototype Delivery — Ready for Client Presentation
+# Dr. Archana IVF & Women Centre — Clinical Operating System
 
-**Status:** ✅ **PRODUCTION READY** — July 29, 2026
+A Hospital Information Management System (HIMS) for a working IVF and fertility
+clinic in Chennai. It covers the clinic's full operational surface: patient
+registration, appointments, consultations, the complete IVF cycle
+(stimulation → retrieval → embryology → transfer → pregnancy follow-up),
+laboratory, pharmacy, inventory, billing, accounting, staff, reporting, and a
+compliance audit trail.
 
----
-
-## 📦 What's Included
-
-This delivery contains a **complete, interactive prototype** of a premium IVF Hospital Management System with:
-
-✅ **14 fully-functional screens**  
-✅ **4 role-based interfaces** (Doctor, Receptionist, Embryologist, Management)  
-✅ **Premium design system** (Emerald + Stone aesthetic)  
-✅ **Realistic patient journey** (Priya Raman & Arjun Kumar)  
-✅ **Complete documentation suite**  
-✅ **Development roadmap** (6-month timeline)  
-✅ **Production-ready codebase** (Next.js 15, TypeScript, React, Tailwind CSS)  
+This is a real production system handling real patients, money and
+medico-legal records — not a prototype.
 
 ---
 
-## 🚀 Quick Start (5 Minutes)
+## Documentation
 
-### 1. Setup
+Read in this order:
+
+| Doc | What it gives you |
+|---|---|
+| **This file** | Setup, in about 10 minutes |
+| **[`CLAUDE.md`](CLAUDE.md)** | Working rules, commands, gotchas — written for Claude Code, useful to humans too |
+| **[`DEVELOPER_HANDOFF.md`](DEVELOPER_HANDOFF.md)** | Full architecture, the permission model, how to split work across a team |
+| **[`NEW_FEATURES_GAP_ANALYSIS.md`](NEW_FEATURES_GAP_ANALYSIS.md)** | Feature-by-feature implementation status |
+
+`docs/archive/` holds documentation from the earlier prototype era. It is kept
+for history and is **not accurate** — don't onboard from it.
+
+---
+
+## Stack
+
+**Backend** — FastAPI (async Python), PostgreSQL 16, SQLAlchemy 2.x + Alembic,
+Redis, Celery, MinIO for object storage. JWT access tokens with an httpOnly
+refresh cookie, argon2 hashing, permission-based RBAC, append-only audit trail.
+33 self-contained modules.
+
+**Frontend** — Next.js 15 (App Router) + TypeScript, Tailwind, TanStack Query,
+React Context for state. 25 screens. Charts are hand-built inline SVG.
+
+**Infra** — Docker Compose for local development.
+
+---
+
+## Running it locally
+
+You need Docker and Node 18+.
+
 ```bash
-cd dr-archana-ivf-prototype
-npm install
-npm run dev
+# 0. Create your env file and fill in real values
+#    (DB password, JWT secret, MinIO keys — comments explain each)
+cp .env.example .env
+
+# 1. Start the backend stack
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis minio api worker beat
+
+# 2. Apply migrations
+#    The api container does NOT run these automatically. Skip this on a
+#    fresh database and every endpoint fails with "relation does not exist".
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api alembic upgrade head
+
+# 3. Seed the database (first run, or after wiping the volume)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api python -m scripts.seed_db --with-demo-data
+
+# 4. Frontend — the port must be 3100, see the note below
+npm --prefix dr-archana-ivf-prototype install
+npm --prefix dr-archana-ivf-prototype run dev -- -p 3100
 ```
 
-### 2. Open Browser
-```
-http://localhost:3000
-```
+Then open **http://localhost:3100**.
 
-### 3. Login
-Click **"👩‍⚕️ Dr. Archana (Doctor)"** to see the full clinical workflow
+The API is on **http://localhost:8600** (OpenAPI schema at `/openapi.json`).
 
-### 4. Navigate
-- Explore 14 screens fully interactive
-- Try all role-based views
-- Follow Priya Raman's complete IVF journey
+### Demo logins
 
----
+All seeded accounts use the password `ChangeMe123!`:
 
-## 📚 Documentation Guide
+| Email | Role | Lands on |
+|---|---|---|
+| `archana@drarchanaivf.in` | Doctor | Dashboard |
+| `lakshmi@drarchanaivf.in` | Front office | Patients |
+| `meera@drarchanaivf.in` | Embryologist | Embryology |
+| `rajesh@drarchanaivf.in` | Management | Reports |
+| `admin@drarchanaivf.in` | Administrator | Reports |
 
-### For Client Presentation (Tomorrow)
-**Read these in order:**
+Each role sees a different menu and a different set of screens — permissions are
+enforced on the backend, not just hidden in the UI.
 
-1. **[CLIENT_PRESENTATION_GUIDE.md](./CLIENT_PRESENTATION_GUIDE.md)** ⭐ **START HERE**
-   - 7-8 minute demo script
-   - Key talking points
-   - Anticipated questions and answers
-   - Success metrics for presentation
+### The frontend port must stay 3100
 
-2. **[dr-archana-ivf-prototype/DEPLOYMENT_GUIDE.md](./dr-archana-ivf-prototype/DEPLOYMENT_GUIDE.md)**
-   - Step-by-step setup instructions
-   - Demo sequence breakdown
-   - Pro tips for maximum impact
-   - Backup plans if something fails
-
-### For Development Team
-**Read these for building the backend:**
-
-3. **[TECHNICAL_ARCHITECTURE.md](./TECHNICAL_ARCHITECTURE.md)**
-   - Backend system design
-   - Database schema
-   - API endpoints
-   - Integration points
-   - 6-month development roadmap
-   - Cost estimates
-
-4. **[PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md)**
-   - Everything delivered
-   - How to use each component
-   - Quality checklist
-   - Next steps after client approval
-
-### For Technical Reference
-**Read these while building:**
-
-5. **[dr-archana-ivf-prototype/README.md](./dr-archana-ivf-prototype/README.md)**
-   - Project structure
-   - Technology stack
-   - Installation instructions
-   - Customization guide
+The backend only accepts requests from origins listed in `CORS_ORIGINS` in
+`.env`, and `3100` is what's configured. Next.js otherwise picks a random free
+port each run, which breaks CORS on every request. If you must change it, update
+`CORS_ORIGINS` and restart the `api` container.
 
 ---
 
-## 📂 File Structure
+## Common problems
 
-```
-outputs/
-│
-├── README.md (this file)
-│   └── Navigation guide for all documents
-│
-├── CLIENT_PRESENTATION_GUIDE.md ⭐
-│   ├── 7-8 minute demo script
-│   ├── Talking points and key highlights
-│   ├── Anticipated questions & answers
-│   └── Success criteria for presentation
-│
-├── TECHNICAL_ARCHITECTURE.md
-│   ├── Complete backend system design
-│   ├── Database schema
-│   ├── API endpoints
-│   ├── Security architecture
-│   ├── Development roadmap (6 months)
-│   └── Cost and team estimates
-│
-├── PROJECT_SUMMARY.md
-│   ├── Complete delivery checklist
-│   ├── Design highlights
-│   ├── Screen descriptions (all 14)
-│   ├── Code statistics
-│   └── Next steps after approval
-│
-└── dr-archana-ivf-prototype/ (COMPLETE APPLICATION)
-    ├── app.tsx                          ← Main application (2,500 LOC)
-    ├── app/
-    │   ├── layout.tsx
-    │   └── page.tsx
-    ├── globals.css                      ← Global styles
-    ├── tailwind.config.ts               ← Design system
-    ├── tsconfig.json
-    ├── package.json                     ← Dependencies
-    ├── next.config.js
-    ├── postcss.config.js
-    ├── README.md                        ← Technical overview
-    ├── DEPLOYMENT_GUIDE.md              ← Setup instructions
-    └── .gitignore
-```
+**`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`**
+Docker Desktop isn't running. Start it, wait for the engine, retry. Not a code problem.
+
+**Every endpoint returns 500 "relation does not exist"**
+Migrations haven't been applied — step 2 above.
+
+**Screens look populated but the database is empty**
+Expected. Screens fall back to demo fixtures when the backend returns an empty
+result, so the app stays demoable on sparse data. See the real/fallback pattern
+in `CLAUDE.md`.
+
+**`ModuleNotFoundError: No module named 'asyncpg'` when running pytest**
+You're running tests on the host. They run inside the container:
+`docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api pytest -q`
+
+**Dev server suddenly 500s on every route with `ENOENT: routes-manifest.json`**
+Something ran `next build` while the dev server was running — they share `.next/`.
+Stop the dev server, `rm -rf dr-archana-ivf-prototype/.next`, restart it.
 
 ---
 
-## 🎯 For Tomorrow's Presentation
+## Tests
 
-### Before You Start (30 minutes)
-- [ ] Read `CLIENT_PRESENTATION_GUIDE.md` (15 min)
-- [ ] Practice the demo flow (10 min)
-- [ ] Test setup: `npm install && npm run dev` (5 min)
-- [ ] Verify browser opens at http://localhost:3000
-
-### During Presentation (7-8 minutes)
-- Follow the script in `CLIENT_PRESENTATION_GUIDE.md`
-- 8 key screens in recommended sequence
-- Use talking points provided
-- Answer questions from Q&A section
-
-### After Presentation (24 hours)
-- Send GitHub repo link + live Vercel URL
-- Share proposal outline
-- Schedule follow-up meeting
-
----
-
-## 14 Screens Included
-
-### Authentication
-1. ✅ **Secure Staff Login** — Role-based access portal
-
-### Clinical Workflows
-2. ✅ **Executive Clinical Dashboard** — Real-time metrics and schedule
-3. ✅ **Doctor Patient Workspace** — Complete patient profile
-4. ✅ **Complete IVF Timeline** — Visual journey visualization
-5. ✅ **Stimulation & Monitoring** — Real-time follicle tracking
-6. ✅ **Embryology Workspace** — Embryo management and grading
-7. ✅ **Embryo Transfer Procedure** — Safety checklist and verification
-8. ✅ **Pregnancy Follow-up** — Outcome tracking with milestones
-
-### Hospital Operations
-9. ✅ **Patient Registration** — Couple registration and linkage
-10. ✅ **Billing Management** — Package and payment tracking
-11. ✅ **Management Dashboard** — Hospital analytics and KPIs
-12. ✅ **Role-Based Access** — Demonstrated for all 4 roles
-13. ✅ **Sidebar Navigation** — Complete app navigation
-14. ✅ **Top Bar** — Search, notifications, user profile
-
----
-
-## 🎨 Design Highlights
-
-**Color Palette:**
-- Primary: Emerald (#16a34a) — Growth, hope, trust
-- Neutral: Stone (gray palette) — Stability, professionalism
-- Status: Green (active), Amber (pending), Red (critical)
-
-**Typography:**
-- Display: Bold, clear hierarchy
-- Body: System fonts, readable
-- Mono: Code and technical data
-
-**Components:**
-- Premium rounded cards
-- Subtle shadows and borders
-- Generous whitespace
-- Calming, warm aesthetic
-- Professional, not clinical-looking
-
----
-
-## 💻 Technology Stack
-
-**Frontend (Production Ready):**
-```
-✅ Next.js 15
-✅ React 18.2
-✅ TypeScript 5.3
-✅ Tailwind CSS 3.3
-✅ Lucide React (Icons)
-✅ React Hook Form
-✅ Zod (Validation)
-```
-
-**Ready to Add (For Backend):**
-```
-📝 PostgreSQL (Database)
-📝 FastAPI (Python Backend)
-📝 Zustand (State Management)
-📝 Recharts (Analytics)
-📝 Celery (Background Jobs)
-```
-
----
-
-## 🔐 Security & Compliance
-
-**Built-in from Day 1:**
-- Role-based access control
-- Audit-ready logging structure
-- HIPAA compliance architecture
-- Secure session design
-- Patient data privacy patterns
-
----
-
-## 📊 By The Numbers
-
-```
-Code:              2,500 LOC (React/TypeScript)
-Components:        19 (11 screens + 8 reusable)
-Design Tokens:     30+ (colors, spacing, typography)
-Screens:           14 fully interactive
-Roles:             4 (Doctor, Receptionist, Embryologist, Management)
-Mock Data Points:  100+ (complete patient journeys)
-Documentation:     8,000+ words
-Icons Used:        20+ from Lucide
-```
-
----
-
-## ✨ Key Features Demonstrated
-
-1. **Complete Patient Journey** — Consultation to pregnancy follow-up
-2. **Couple Integration** — Priya & Arjun linked as treatment pair
-3. **Real-time Monitoring** — Follicle tracking and hormone results
-4. **Embryology Management** — Embryo grading, selection, storage
-5. **Role-Based Access** — Different views for different staff
-6. **Premium Design** — Not like other hospital software
-7. **Safety Verification** — Pre-transfer checklist pattern
-8. **Outcome Tracking** — Positive pregnancy and milestones
-9. **Operational Oversight** — Management dashboard with KPIs
-10. **Billing Integration** — Package and payment tracking
-
----
-
-## 🚀 What's Next
-
-### Immediate (If Client Approves)
-- Requirements workshop with stakeholders
-- Final feature specification
-- Team assembly
-- Backend architecture finalization
-
-### Development (Months 1-6)
-- **Phase 1 (Weeks 1-8):** Core workflows
-- **Phase 2 (Weeks 9-16):** Operations modules
-- **Phase 3 (Weeks 17-24):** Advanced features
-- Launch: Month 6
-
-### Support
-- 24/7 emergency support
-- 9 AM - 6 PM regular support
-- Dedicated support engineer
-
----
-
-## 💰 Investment
-
-**Development:**
-- Phase 1 (Core): ₹8-10 lakhs
-- Phase 2 (Operations): ₹8-10 lakhs
-- Phase 3 (Advanced): ₹5-8 lakhs
-- **Total: ₹21-28 lakhs**
-
-**Monthly Infrastructure:**
-- AWS Services: ₹34,500
-- Third-party Services: ₹8,500
-- **Total: ₹43,000/month**
-
-**ROI Expected:**
-- 30-40% operational efficiency gains
-- 20-30% improved patient satisfaction
-- 15-25% revenue growth from better billing
-- Competitive advantage in IVF market
-
----
-
-## 🎓 How to Use This Prototype
-
-### For Demonstration
 ```bash
-# Quick 5-minute setup
-cd dr-archana-ivf-prototype
-npm install
-npm run dev
+# Backend — 25 tests, run inside the container
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api pytest -q
 
-# Opens http://localhost:3000
-# Ready for live client demo
+# Frontend typecheck
+npm --prefix dr-archana-ivf-prototype run typecheck
 ```
 
-### For Understanding Code
-- Open `app.tsx`
-- See main application component
-- Review data layer (lines 1-200)
-- Check screen components (lines 200-2500)
-- Study component patterns
-
-### For Modification
-- Change colors in `tailwind.config.ts`
-- Add screens by copying pattern
-- Update mock data to test features
-- Modify styling with Tailwind classes
-
-### For Deployment
-- Push to GitHub
-- Connect to Vercel
-- Get live URL for client access
-- Automatic updates on git push
+There are no frontend tests yet, and backend coverage is thin (7 files for 33
+modules). Both are known gaps — see `DEVELOPER_HANDOFF.md` §7.
 
 ---
 
-## ❓ Frequently Asked Questions
+## Security notes
 
-**Q: Is this a real application?**  
-A: Yes. It's a fully-functional React application with complete interactivity. Everything you see works. It just doesn't connect to a real database (by design—that comes in Phase 1).
+`.env` is gitignored and must stay that way. It holds the database password, the
+JWT signing secret and the MinIO keys. Nothing in the repository contains real
+credentials — `.env.example` ships placeholder values only.
 
-**Q: Can we change the design?**  
-A: Absolutely. Change colors in `tailwind.config.ts`, fonts in `globals.css`, or components in `app.tsx`. It's production code, not a mockup.
-
-**Q: How long did this take to build?**  
-A: ~40 hours of focused development. Design research, component architecture, complete implementation, and documentation.
-
-**Q: What if we need to add more screens?**  
-A: Very simple. Copy a screen component, rename it, add to navigation, style it. Same pattern for all 14 screens.
-
-**Q: Can this scale to 1000+ patients?**  
-A: The frontend will. You'll need backend optimization for data. Database indexing, caching, pagination all matter at scale.
-
-**Q: What about mobile?**  
-A: Current prototype is desktop-first. Mobile support is designed but not primary. Can add responsive tweaks easily.
-
-**Q: Is this HIPAA compliant?**  
-A: The design is HIPAA-ready, but compliance comes with encryption, authentication, and audit logging (Phase 1).
-
----
-
-## 🎯 Success Path
-
-```
-TODAY:     Demo prototype → Client is impressed
-WEEK 1:    Requirements workshop → Clear specifications
-WEEKS 2-3: Design finalization → Team onboarding
-WEEKS 4-8: Phase 1 development → Core features live
-WEEKS 9-16: Phase 2 development → Full operations
-WEEKS 17-24: Phase 3 + Launch → Production system
-
-Timeline: 6 months to complete production system
-```
-
----
-
-## 📞 Support
-
-### Questions Before Presentation?
-- Read `CLIENT_PRESENTATION_GUIDE.md` (answers 90% of questions)
-- Check `TECHNICAL_ARCHITECTURE.md` for technical details
-- Review `PROJECT_SUMMARY.md` for delivery checklist
-
-### Questions During Development?
-- Reference code in `app.tsx`
-- Check `TECHNICAL_ARCHITECTURE.md` for API design
-- Follow patterns in existing screens
-
-### Need to Change Something?
-- Modify `tailwind.config.ts` for design
-- Update mock data in `app.tsx`
-- Add new screens by copying pattern
-- Push to GitHub → Auto-deploys to Vercel
-
----
-
-## ✅ Pre-Presentation Checklist
-
-- [ ] Node.js 18+ installed
-- [ ] `npm install` completed successfully
-- [ ] `npm run dev` starts without errors
-- [ ] Browser opens http://localhost:3000
-- [ ] Can login as Dr. Archana
-- [ ] Can navigate all 14 screens
-- [ ] All data displays correctly
-- [ ] Read `CLIENT_PRESENTATION_GUIDE.md`
-- [ ] Practiced 7-8 minute demo flow
-- [ ] Have talking points memorized
-- [ ] Have answers to anticipated questions
-- [ ] Have backup: screen recording ready
-- [ ] Have GitHub link ready to share
-- [ ] Have proposal outline drafted
-
----
-
-## 🎉 You're Ready
-
-Everything you need is here:
-
-✅ A complete, working application  
-✅ A proven demo script  
-✅ Comprehensive documentation  
-✅ Technical architecture for development  
-✅ Business talking points  
-✅ Success criteria and metrics  
-
-**Go present this tomorrow.**
-
-**Shock your client.**
-
-**Make it happen.**
-
----
-
-## 📋 Document Navigation
-
-| Need | Read This | Time |
-|------|-----------|------|
-| Demo script for tomorrow | CLIENT_PRESENTATION_GUIDE.md | 15 min |
-| Setup & launch instructions | dr-archana-ivf-prototype/DEPLOYMENT_GUIDE.md | 5 min |
-| Backend design & roadmap | TECHNICAL_ARCHITECTURE.md | 30 min |
-| Complete delivery overview | PROJECT_SUMMARY.md | 20 min |
-| Technical implementation | dr-archana-ivf-prototype/README.md | 15 min |
-
----
-
-**Dr. Archana IVF Clinical Operating System**  
-**Prototype Delivery — July 29, 2026**
-
-*Built with precision. Ready for impact. Time to present.* 🚀
+The system stores identifiable patient data and clinical records. Before any
+production deployment, settle TLS, database backups, secret management and log
+retention. None of those are configured yet.
