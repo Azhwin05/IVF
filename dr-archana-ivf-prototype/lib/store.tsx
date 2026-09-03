@@ -28,7 +28,9 @@ export type ScreenId =
   | 'reports'
   | 'access'
   | 'audit'
-  | 'administration';
+  | 'administration'
+  | 'donors'
+  | 'messaging';
 
 interface AppState {
   role: Role | null;

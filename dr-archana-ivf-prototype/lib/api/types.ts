@@ -42,6 +42,9 @@ export interface PatientSummary {
   date_of_birth: string | null;
   gender: string;
   blood_group: string | null;
+  nationality: string | null;
+  is_international: boolean;
+  photo_document_id: string | null;
   phone: string | null;
   email: string | null;
   allergies: string | null;
@@ -53,6 +56,8 @@ export interface PatientCreate {
   date_of_birth?: string | null;
   gender: string;
   blood_group?: string | null;
+  nationality?: string | null;
+  is_international?: boolean;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
@@ -89,6 +94,9 @@ export interface PatientDocumentOut {
   content_type: string;
   size_bytes: number;
   signed: boolean;
+  verification_status: 'not_required' | 'pending' | 'verified' | 'rejected';
+  verified_by_id: string | null;
+  verified_at: string | null;
   created_at: string;
 }
 

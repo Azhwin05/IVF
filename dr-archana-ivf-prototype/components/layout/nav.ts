@@ -22,6 +22,8 @@ import {
   ShieldCheck,
   ScrollText,
   Settings,
+  Dna,
+  MessageCircle,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -49,11 +51,13 @@ export const NAV: NavItem[] = [
   { id: 'transfer', label: 'Embryo Transfer', icon: Baby, section: 'Laboratory', roles: ['doctor', 'embryologist'] },
   { id: 'pregnancy', label: 'Pregnancy Follow-up', icon: HeartPulse, section: 'Laboratory', roles: ['doctor'] },
   { id: 'laboratory', label: 'Laboratory', icon: FlaskConical, section: 'Laboratory', roles: ['doctor', 'embryologist', 'management'] },
+  { id: 'donors', label: 'Donor Management', icon: Dna, section: 'Laboratory', roles: ['doctor', 'embryologist'] },
 
   // ---------------- OPERATIONS ----------------
   { id: 'pharmacy', label: 'Pharmacy', icon: Pill, section: 'Operations', roles: ['receptionist', 'management', 'doctor'] },
   { id: 'inventory', label: 'Inventory', icon: Boxes, section: 'Operations', roles: ['embryologist', 'management'] },
   { id: 'billing', label: 'Billing & Packages', icon: Receipt, section: 'Operations', roles: ['doctor', 'receptionist', 'management'] },
+  { id: 'messaging', label: 'Patient Messaging', icon: MessageCircle, section: 'Operations', roles: ['receptionist', 'management', 'doctor'] },
   { id: 'accounting', label: 'Accounting', icon: Wallet, section: 'Operations', roles: ['management'] },
   { id: 'staff', label: 'Staff Management', icon: Users2, section: 'Operations', roles: ['management'] },
 
@@ -100,4 +104,6 @@ export const SCREEN_TITLES: Record<ScreenId, string> = {
   access: 'Role-Based Access Control',
   audit: 'Audit Log',
   administration: 'System Administration',
+  donors: 'Donor Management',
+  messaging: 'Patient Messaging',
 };

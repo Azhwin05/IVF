@@ -43,3 +43,104 @@ export function useCreateCouple() {
     },
   });
 }
+
+// ---- Mandatory documents (Aadhaar / visa) & visa support ----
+
+export interface MandatoryDocumentStatus {
+  patient_id: string;
+  required_document_type: string;
+  is_uploaded: boolean;
+  is_verified: boolean;
+}
+
+export function useMandatoryDocumentStatus(patientId: string | null) {
+  return useQuery({
+    queryKey: ['mandatory-documents', patientId],
+    queryFn: () => apiFetch<MandatoryDocumentStatus>(`/patients/${patientId}/mandatory-documents`),
+    enabled: !!patientId,
+  });
+}
+
+export type VisaSupportStatus = 'requested' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface VisaSupportRequestOut {
+  id: string;
+  patient_id: string;
+  request_type: string;
+  status: VisaSupportStatus;
+  notes: string | null;
+  handled_by_id: string | null;
+  created_at: string;
+}
+
+export function useVisaSupportRequests(patientId: string | null) {
+  return useQuery({
+    queryKey: ['visa-support', patientId],
+    queryFn: () => apiFetch<VisaSupportRequestOut[]>(`/patients/${patientId}/visa-support`),
+    enabled: !!patientId,
+  });
+}
+
+export function useCreateVisaSupportRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { patient_id: string; request_type: string; notes?: string | null }) =>
+      apiFetch<VisaSupportRequestOut>('/patients/visa-support', { method: 'POST', body }),
+    onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: ['visa-support', vars.patient_id] }),
+  });
+}
+
+export function useUpdateVisaSupportStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, status, notes }: { requestId: string; status: VisaSupportStatus; notes?: string | null }) =>
+      apiFetch<VisaSupportRequestOut>(`/patients/visa-support/${requestId}/status`, { method: 'POST', body: { status, notes } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visa-support'] }),
+  });
+}
+
+export function useVerifyDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ documentId, approve, notes }: { documentId: string; approve: boolean; notes?: string | null }) =>
+      apiFetch(`/patients/documents/${documentId}/verify`, { method: 'POST', body: { approve, notes } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['mandatory-documents'] });
+    },
+  });
+}
+
+// ---- Document upload (multipart — bypasses apiFetch's JSON-only body) ----
+
+export async function uploadPatientDocument(patientId: string, documentType: string, file: File): Promise<{ id: string; document_type: string; filename: string }> {
+  const { API_BASE, tokenStore } = await import('./client');
+  const token = tokenStore.get();
+  const form = new FormData();
+  form.append('file', file);
+
+  const res = await fetch(`${API_BASE}/patients/${patientId}/documents?document_type=${encodeURIComponent(documentType)}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null);
+    throw new Error(payload?.message ?? `Upload failed (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
+export function useUploadPatientDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ patientId, documentType, file }: { patientId: string; documentType: string; file: File }) =>
+      uploadPatientDocument(patientId, documentType, file),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['patient-documents', vars.patientId] });
+      queryClient.invalidateQueries({ queryKey: ['mandatory-documents', vars.patientId] });
+      queryClient.invalidateQueries({ queryKey: ['patient-summary', vars.patientId] });
+    },
+  });
+}

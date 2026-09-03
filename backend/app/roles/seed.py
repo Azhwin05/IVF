@@ -225,16 +225,21 @@ async def seed_roles_and_permissions(session: AsyncSession) -> None:
 
     for role_code, (name, perm_codes) in ROLE_DEFAULTS.items():
         if role_code in existing_roles:
-            if perm_codes == ["*"]:
-                # A "*" role (administrator) must always hold every current
-                # permission, including ones added to PERMISSIONS after this
-                # role was first seeded — re-sync it every run rather than
-                # silently drifting out of date whenever a new permission
-                # (like ivf.protocol.*) is introduced.
-                result = await session.execute(select(Role).where(Role.code == role_code))
-                role = result.scalar_one()
-                role.permissions = list(all_perms.values())
-                session.add(role)
+            # Every system role (defined here in code, not created by a
+            # hospital admin) is re-synced to exactly match ROLE_DEFAULTS on
+            # every run — not just the "*" wildcard role. Without this, a
+            # permission added to an existing role's list here (e.g.
+            # donor.read added to "embryologist" after that role was first
+            # seeded) would silently never reach an already-seeded database,
+            # which is exactly the bug that shipped ivf.protocol.* and
+            # donor.* without embryologist/doctor actually getting them. A
+            # hospital that wants to customize permissions for a role
+            # should create a NEW role rather than editing a system one —
+            # this resync would otherwise undo that edit on the next deploy.
+            result = await session.execute(select(Role).where(Role.code == role_code))
+            role = result.scalar_one()
+            role.permissions = list(all_perms.values()) if perm_codes == ["*"] else [all_perms[c] for c in perm_codes if c in all_perms]
+            session.add(role)
             continue
         role = Role(code=role_code, name=name, is_system_role=True)
         if perm_codes == ["*"]:

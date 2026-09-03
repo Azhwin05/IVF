@@ -153,3 +153,74 @@ export function useRecordPregnancyMilestone() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pregnancy'] }),
   });
 }
+
+// ---- Restricted treatment protocol (Chief Consultant + Admin only) ----
+
+export interface TreatmentProtocolOut {
+  id: string;
+  cycle_id: string;
+  content: string;
+  fields: Record<string, unknown> | null;
+  created_by_id: string;
+  updated_by_id: string | null;
+}
+
+export function useTreatmentProtocol(cycleId: string | null) {
+  return useQuery({
+    queryKey: ['treatment-protocol', cycleId],
+    queryFn: () => apiFetch<TreatmentProtocolOut | null>(`/ivf/cycles/${cycleId}/protocol`),
+    enabled: !!cycleId,
+    retry: false, // a 403 here is expected for most roles — don't retry it
+  });
+}
+
+export function useSaveTreatmentProtocol() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ cycleId, content, fields }: { cycleId: string; content: string; fields?: Record<string, unknown> | null }) =>
+      apiFetch<TreatmentProtocolOut>(`/ivf/cycles/${cycleId}/protocol`, { method: 'PUT', body: { content, fields } }),
+    onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: ['treatment-protocol', vars.cycleId] }),
+  });
+}
+
+// ---- Injection administration (payment-gated) ----
+
+export type InjectionStatus = 'scheduled' | 'administered' | 'skipped';
+
+export interface InjectionOut {
+  id: string;
+  cycle_id: string;
+  medicine_name: string;
+  dose: string;
+  scheduled_at: string;
+  status: InjectionStatus;
+  administered_at: string | null;
+  administered_by_id: string | null;
+  notes: string | null;
+}
+
+export function useInjections(cycleId: string | null) {
+  return useQuery({
+    queryKey: ['injections', cycleId],
+    queryFn: () => apiFetch<InjectionOut[]>(`/ivf/injections/by-cycle/${cycleId}`),
+    enabled: !!cycleId,
+  });
+}
+
+export function useScheduleInjection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { cycle_id: string; medicine_name: string; dose: string; scheduled_at: string }) =>
+      apiFetch<InjectionOut>('/ivf/injections', { method: 'POST', body }),
+    onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: ['injections', vars.cycle_id] }),
+  });
+}
+
+export function useAdministerInjection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ injectionId, notes }: { injectionId: string; notes?: string | null }) =>
+      apiFetch<InjectionOut>(`/ivf/injections/${injectionId}/administer`, { method: 'POST', body: { notes } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['injections'] }),
+  });
+}

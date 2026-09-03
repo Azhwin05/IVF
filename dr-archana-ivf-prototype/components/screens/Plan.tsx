@@ -1,13 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp, type ScreenId } from '@/lib/store';
 import { PATIENT, PARTNER, MEDICATIONS, PACKAGE, INVESTIGATIONS } from '@/lib/data';
 import { cn, formatINR } from '@/lib/utils';
-import { Card, CardHeader, Badge, Button, SectionTitle, Field, DataRow, InfoNote, ProgressBar } from '@/components/ui/primitives';
+import { Card, CardHeader, Badge, Button, SectionTitle, Field, DataRow, InfoNote, ProgressBar, Input } from '@/components/ui/primitives';
 import { PatientHeader } from './Workspace';
 import { useCoupleForPatient } from '@/lib/api/patients';
-import { useActiveCycle, useSaveTreatmentPlan, type CycleStage } from '@/lib/api/ivf';
+import {
+  useActiveCycle,
+  useSaveTreatmentPlan,
+  useTreatmentProtocol,
+  useSaveTreatmentProtocol,
+  useInjections,
+  useScheduleInjection,
+  useAdministerInjection,
+  type CycleStage,
+} from '@/lib/api/ivf';
 import { ApiError } from '@/lib/api/client';
 import {
   ClipboardList,
@@ -20,6 +29,9 @@ import {
   CircleDot,
   Circle,
   Stethoscope,
+  Lock,
+  Syringe,
+  Plus,
 } from 'lucide-react';
 
 const UI_STAGES = [
@@ -61,6 +73,20 @@ export function Plan() {
   const savePlan = useSaveTreatmentPlan();
 
   const cycle = cycleQuery.data ?? null;
+
+  // Restricted protocol — Chief Consultant + Admin only. A failed fetch
+  // (403 for every other role) means the card simply doesn't render,
+  // never a frontend-only hide of data that was already sent.
+  const protocolQuery = useTreatmentProtocol(cycle?.id ?? null);
+  const saveProtocol = useSaveTreatmentProtocol();
+  const [protocolDraft, setProtocolDraft] = useState('');
+  const [protocolEditing, setProtocolEditing] = useState(false);
+  const canSeeProtocol = !protocolQuery.isError && !!cycle;
+
+  const injectionsQuery = useInjections(cycle?.id ?? null);
+  const scheduleInjection = useScheduleInjection();
+  const administerInjection = useAdministerInjection();
+  const [newInjection, setNewInjection] = useState({ medicine_name: '', dose: '', scheduled_at: '' });
   const plan = cycle?.treatment_plans?.[0] ?? null;
   const stages = buildStages(cycle?.stage ?? null);
   const activeIdx = stages.findIndex((s) => s.status === 'active');
@@ -204,6 +230,73 @@ export function Plan() {
             </div>
           </Card>
 
+          {cycle && (
+            <Card>
+              <CardHeader
+                icon={<Syringe className="h-4 w-4" />}
+                title="Injection Schedule"
+                subtitle="Administration requires payment clearance"
+              />
+              <div className="stagger space-y-2 px-5 pb-3">
+                {(injectionsQuery.data ?? []).length === 0 && (
+                  <p className="text-[13.5px] text-ink-500">No injections scheduled yet for this cycle.</p>
+                )}
+                {(injectionsQuery.data ?? []).map((inj, i) => (
+                  <div key={inj.id} style={{ ['--i' as string]: i }} className="flex flex-wrap items-center gap-3 rounded-xl border border-ink-200/70 p-3.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+                      <Syringe className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14.5px] font-semibold text-ink-900">
+                        {inj.medicine_name} <span className="tnum font-normal text-ink-500">· {inj.dose}</span>
+                      </p>
+                      <p className="tnum text-[12.5px] text-ink-500">
+                        Scheduled {new Date(inj.scheduled_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    {inj.status === 'scheduled' ? (
+                      <Button
+                        size="sm" variant="primary"
+                        loading={administerInjection.isPending}
+                        onClick={() => administerInjection.mutate(
+                          { injectionId: inj.id },
+                          {
+                            onSuccess: () => toast({ title: 'Injection administered', body: `${inj.medicine_name} recorded.`, tone: 'success' }),
+                            onError: (err) => toast({
+                              title: err instanceof ApiError && err.errorCode === 'payment_required' ? 'Payment required' : 'Could not administer',
+                              body: err instanceof ApiError ? err.message : 'Please try again.',
+                              tone: 'error',
+                            }),
+                          }
+                        )}
+                      >
+                        Mark Administered
+                      </Button>
+                    ) : (
+                      <Badge tone={inj.status === 'administered' ? 'completed' : 'neutral'} size="sm">{inj.status}</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-end gap-2 border-t border-ink-100 px-5 py-4">
+                <Input placeholder="Medicine" value={newInjection.medicine_name} onChange={(e) => setNewInjection((f) => ({ ...f, medicine_name: e.target.value }))} className="min-w-[140px] flex-1" />
+                <Input placeholder="Dose" value={newInjection.dose} onChange={(e) => setNewInjection((f) => ({ ...f, dose: e.target.value }))} className="w-28" />
+                <Input type="datetime-local" value={newInjection.scheduled_at} onChange={(e) => setNewInjection((f) => ({ ...f, scheduled_at: e.target.value }))} className="min-w-[180px]" />
+                <Button
+                  icon={<Plus className="h-3.5 w-3.5" />}
+                  disabled={!newInjection.medicine_name || !newInjection.dose || !newInjection.scheduled_at}
+                  loading={scheduleInjection.isPending}
+                  onClick={() => scheduleInjection.mutate(
+                    { cycle_id: cycle.id, medicine_name: newInjection.medicine_name, dose: newInjection.dose, scheduled_at: new Date(newInjection.scheduled_at).toISOString() },
+                    { onSuccess: () => setNewInjection({ medicine_name: '', dose: '', scheduled_at: '' }) }
+                  )}
+                >
+                  Schedule
+                </Button>
+              </div>
+            </Card>
+          )}
+
           <Card>
             <CardHeader icon={<FlaskConical className="h-4 w-4" />} title="Planned Investigations" subtitle="Baseline workup completed prior to cycle start" />
             <div className="grid gap-2 px-5 pb-5 sm:grid-cols-2">
@@ -221,6 +314,57 @@ export function Plan() {
 
         {/* ============ RIGHT RAIL ============ */}
         <div className="space-y-5">
+          {canSeeProtocol && (
+            <Card>
+              <CardHeader
+                icon={<Lock className="h-4 w-4" />}
+                title="Treatment Protocol"
+                subtitle="Restricted — Chief Consultant & Admin only"
+                action={
+                  !protocolEditing && (
+                    <Button size="sm" onClick={() => { setProtocolDraft(protocolQuery.data?.content ?? ''); setProtocolEditing(true); }}>
+                      {protocolQuery.data ? 'Edit' : 'Add'}
+                    </Button>
+                  )
+                }
+              />
+              <div className="px-5 pb-5">
+                {protocolEditing ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={protocolDraft}
+                      onChange={(e) => setProtocolDraft(e.target.value)}
+                      rows={5}
+                      className="w-full rounded-lg border border-ink-200 bg-white p-3 text-[13.5px] text-ink-900"
+                      placeholder="Protocol content…"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" onClick={() => setProtocolEditing(false)}>Cancel</Button>
+                      <Button
+                        size="sm" variant="primary"
+                        loading={saveProtocol.isPending}
+                        disabled={!protocolDraft.trim()}
+                        onClick={() => saveProtocol.mutate(
+                          { cycleId: cycle!.id, content: protocolDraft },
+                          {
+                            onSuccess: () => { setProtocolEditing(false); toast({ title: 'Protocol saved', body: 'Recorded in the audit trail.', tone: 'success' }); },
+                            onError: (err) => toast({ title: 'Could not save', body: err instanceof ApiError ? err.message : 'Please try again.', tone: 'error' }),
+                          }
+                        )}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : protocolQuery.data ? (
+                  <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink-700">{protocolQuery.data.content}</p>
+                ) : (
+                  <p className="text-[13px] text-ink-500">No protocol recorded yet for this cycle.</p>
+                )}
+              </div>
+            </Card>
+          )}
+
           <Card>
             <CardHeader icon={<ShieldCheck className="h-4 w-4" />} title="Consent Status" />
             <div className="px-5 pb-5">

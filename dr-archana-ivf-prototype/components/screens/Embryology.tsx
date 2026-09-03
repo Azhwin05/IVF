@@ -10,6 +10,7 @@ import { useCoupleForPatient } from '@/lib/api/patients';
 import { useActiveCycle } from '@/lib/api/ivf';
 import { useEmbryosForCycle, type EmbryoOut } from '@/lib/api/embryology';
 import { useCryoLocationsForCycle } from '@/lib/api/cryostorage';
+import { ApiError } from '@/lib/api/client';
 import {
   Microscope,
   Snowflake,
@@ -19,6 +20,7 @@ import {
   Layers,
   Beaker,
   ClipboardCheck,
+  Lock,
 } from 'lucide-react';
 
 /** Stylised blastocyst rendering — grade drives the visual. */
@@ -148,6 +150,14 @@ export function Embryology() {
   const embryosQuery = useEmbryosForCycle(cycleQuery.data?.id ?? null);
   const locationsQuery = useCryoLocationsForCycle(cycleQuery.data?.id ?? null);
 
+  // Payment gate (source doc §16): a real cycle whose embryology charge
+  // isn't cleared returns 402, not an empty list. Falling back to the
+  // demo fixture in that specific case would silently show plausible-
+  // looking data where the backend deliberately blocked it — so this is
+  // the one case where the usual real/fallback pattern does NOT apply.
+  const paymentBlocked = cycleQuery.data != null && embryosQuery.isError
+    && embryosQuery.error instanceof ApiError && embryosQuery.error.errorCode === 'payment_required';
+
   const realEmbryos = embryosQuery.data ?? [];
   const hasRealData = realEmbryos.length > 0;
   const embryos = useMemo(() => {
@@ -181,6 +191,25 @@ export function Embryology() {
           </Button>
         </div>
       </div>
+
+      {paymentBlocked && (
+        <Card className="border-amber-300 bg-amber-50/60 p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[14.5px] font-semibold text-amber-900">Embryo details are locked</p>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-amber-800">
+                The embryology charge for this cycle has not been cleared. Details below are illustrative only,
+                not this patient&apos;s real data — front desk needs to raise and clear the charge before the
+                embryologist can view actual embryo records. An authorised user can also proceed via a billing override.
+              </p>
+              <Button size="sm" className="mt-3" onClick={() => go('billing')}>Open Billing</Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* ============ FERTILISATION FUNNEL ============ */}
       <Card>

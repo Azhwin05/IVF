@@ -34,6 +34,8 @@ import { Reports } from '@/components/screens/Reports';
 import { Access } from '@/components/screens/Access';
 import { Audit } from '@/components/screens/Audit';
 import { Administration } from '@/components/screens/Administration';
+import { Donors } from '@/components/screens/Donors';
+import { Messaging } from '@/components/screens/Messaging';
 
 import { Lock, ArrowLeft } from 'lucide-react';
 
@@ -111,6 +113,10 @@ function ScreenRouter() {
       return <Audit />;
     case 'administration':
       return <Administration />;
+    case 'donors':
+      return <Donors />;
+    case 'messaging':
+      return <Messaging />;
     default:
       return <Dashboard />;
   }

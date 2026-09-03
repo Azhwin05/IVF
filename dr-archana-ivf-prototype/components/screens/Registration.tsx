@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { cn, ageFromDOB, initialsOf } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Input, Select, Field, InfoNote, Avatar } from '@/components/ui/primitives';
-import { useCreateCouple } from '@/lib/api/patients';
+import { useCreateCouple, useUploadPatientDocument, useMandatoryDocumentStatus } from '@/lib/api/patients';
 import { ApiError } from '@/lib/api/client';
 import type { CoupleOut } from '@/lib/api/types';
-import { Check, ChevronLeft, ChevronRight, UserPlus, Users, Heart, FileCheck, Link2, ShieldCheck, Sparkles, AlertTriangle } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, UserPlus, Users, Heart, FileCheck, Link2, ShieldCheck, Sparkles, AlertTriangle, Upload } from 'lucide-react';
 
 const STEPS = [
   { id: 0, label: 'Patient Details', icon: UserPlus },
@@ -16,6 +16,52 @@ const STEPS = [
   { id: 3, label: 'Documents & Consent', icon: FileCheck },
   { id: 4, label: 'Review & Create', icon: Check },
 ];
+
+/** New requirement — mandatory document upload right after registration:
+ * Aadhaar for Indian patients, visa for international ones (source doc §4). */
+function MandatoryDocumentUpload({ patientId, patientName, isInternational }: { patientId: string; patientName: string; isInternational: boolean }) {
+  const { toast } = useApp();
+  const upload = useUploadPatientDocument();
+  const statusQuery = useMandatoryDocumentStatus(patientId);
+  const documentType = isInternational ? 'visa' : 'aadhaar';
+  const label = isInternational ? 'Visa' : 'Aadhaar';
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+          <ShieldCheck className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-[14.5px] font-semibold text-ink-900">{label} required for {patientName}</p>
+          <p className="text-[12.5px] text-ink-500">{isInternational ? 'International patients must provide a valid visa.' : 'Aadhaar is mandatory for Indian patients.'}</p>
+        </div>
+      </div>
+
+      {statusQuery.data?.is_uploaded ? (
+        <Badge tone="completed" size="sm">{label} uploaded{statusQuery.data.is_verified ? ' and verified' : ' — pending verification'}</Badge>
+      ) : (
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ink-300 p-5 text-[13.5px] text-ink-500 transition-colors hover:border-brand-400 hover:text-brand-700">
+          <Upload className="h-4 w-4" />
+          {upload.isPending ? 'Uploading…' : `Upload ${label}`}
+          <input
+            type="file"
+            className="hidden"
+            accept="image/*,.pdf"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              upload.mutate(
+                { patientId, documentType, file },
+                { onSuccess: () => toast({ title: `${label} uploaded`, body: 'Awaiting front-desk verification.', tone: 'success' }) }
+              );
+            }}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
 
 export function Registration() {
   const { go, toast, openPatient } = useApp();
@@ -32,6 +78,8 @@ export function Registration() {
     email: '',
     address: '',
     blood: 'B Positive',
+    nationality: 'Indian',
+    isInternational: false,
     emergency: '',
     referral: '',
     pName: '',
@@ -48,6 +96,7 @@ export function Registration() {
   });
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const setBool = (k: 'isInternational', v: boolean) => setForm((f) => ({ ...f, [k]: v }));
 
   const create = () => {
     setError(null);
@@ -58,6 +107,8 @@ export function Registration() {
           date_of_birth: form.dob || null,
           gender: 'female',
           blood_group: form.blood,
+          nationality: form.nationality || null,
+          is_international: form.isInternational,
           phone: form.phone || null,
           email: form.email || null,
           address: form.address || null,
@@ -137,6 +188,16 @@ export function Registration() {
             </div>
           </div>
         </Card>
+
+        {createdCouple && (
+          <Card className="mt-5 w-full p-5 text-left">
+            <MandatoryDocumentUpload
+              patientId={createdCouple.female_patient.id}
+              patientName={form.name}
+              isInternational={form.isInternational}
+            />
+          </Card>
+        )}
 
         <div className="mt-6 flex gap-3">
           <Button onClick={() => { setDone(false); setCreatedCouple(null); setStep(0); }}>Register another couple</Button>
@@ -241,6 +302,16 @@ export function Registration() {
                 ))}
               </Select>
               <Input label="Referral Source" value={form.referral} onChange={(e) => set('referral', e.target.value)} />
+              <Input label="Nationality" value={form.nationality} onChange={(e) => set('nationality', e.target.value)} />
+              <label className="flex items-center gap-2.5 self-end pb-2.5">
+                <input
+                  type="checkbox"
+                  checked={form.isInternational}
+                  onChange={(e) => setBool('isInternational', e.target.checked)}
+                  className="h-4 w-4 rounded border-ink-300 text-brand-600"
+                />
+                <span className="text-[13.5px] text-ink-700">International patient (requires visa, not Aadhaar)</span>
+              </label>
               <div className="sm:col-span-2">
                 <Input label="Address" value={form.address} onChange={(e) => set('address', e.target.value)} />
               </div>
