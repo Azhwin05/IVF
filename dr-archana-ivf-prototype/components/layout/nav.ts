@@ -70,13 +70,31 @@ export const NAV: NavItem[] = [
 
 export const SECTIONS = ['Clinical', 'Laboratory', 'Operations', 'Management'];
 
+/** The handful of screens staff open constantly. These are lifted out of
+ *  their sections and pinned to the top of the menu so the three things
+ *  used every single session are never more than one glance away. */
+export const PINNED_IDS: ScreenId[] = ['dashboard', 'patients', 'appointments'];
+
 export function navForRole(role: Role) {
   return NAV.filter((n) => n.roles.includes(role));
+}
+
+/** Menu split into the pinned cluster and the remaining sectioned items. */
+export function navGroupsForRole(role: Role) {
+  const items = navForRole(role);
+  return {
+    pinned: PINNED_IDS.map((id) => items.find((i) => i.id === id)).filter(
+      (i): i is NavItem => !!i
+    ),
+    sectioned: items.filter((i) => !PINNED_IDS.includes(i.id)),
+  };
 }
 
 export function canAccess(role: Role, screen: ScreenId) {
   // Patient workspace is reachable by any role that can see the patient list
   if (screen === 'workspace') return ['doctor', 'receptionist', 'management'].includes(role);
+  // Interface preferences are personal, not clinical — every role has them.
+  if (screen === 'settings') return true;
   const item = NAV.find((n) => n.id === screen);
   return item ? item.roles.includes(role) : false;
 }
@@ -106,4 +124,5 @@ export const SCREEN_TITLES: Record<ScreenId, string> = {
   administration: 'System Administration',
   donors: 'Donor Management',
   messaging: 'Patient Messaging',
+  settings: 'User Interface Settings',
 };

@@ -5,7 +5,7 @@ import { useApp, type ScreenId } from '@/lib/store';
 import { PATIENTS, EMBRYOS } from '@/lib/data';
 import { navForRole } from './nav';
 import { cn } from '@/lib/utils';
-import { Search, CornerDownLeft, Users, Microscope, ArrowRight } from 'lucide-react';
+import { Search, CornerDownLeft, Users, Microscope, ArrowRight, Sliders } from 'lucide-react';
 import { Avatar } from '@/components/ui/primitives';
 
 interface Result {
@@ -42,6 +42,17 @@ export function CommandPalette() {
       icon: n.icon,
       run: () => go(n.id as ScreenId),
     }));
+
+    // Interface settings have no menu entry (they live in the user menu),
+    // so the palette is the other way staff find them by name.
+    nav.push({
+      id: 'nav-settings',
+      label: 'Interface Settings',
+      hint: 'Text size, density, contrast',
+      group: 'Navigate',
+      icon: Sliders,
+      run: () => go('settings' as ScreenId),
+    });
 
     const patients = PATIENTS.map((p) => ({
       id: `pat-${p.id}`,

@@ -4,7 +4,9 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import type { Role, StaffUser } from './data';
 import type { ToastItem } from '@/components/ui/primitives';
 import { useAuth } from './auth';
+import { usePreferences } from './preferences';
 import { toDisplayUser } from './roleMeta';
+import { canAccess } from '@/components/layout/nav';
 
 export type ScreenId =
   | 'dashboard'
@@ -30,7 +32,8 @@ export type ScreenId =
   | 'audit'
   | 'administration'
   | 'donors'
-  | 'messaging';
+  | 'messaging'
+  | 'settings';
 
 interface AppState {
   role: Role | null;
@@ -63,8 +66,13 @@ const Ctx = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { user: authUser, logout: authLogout } = useAuth();
+  const { prefs } = usePreferences();
   const role = authUser ? toDisplayUser(authUser).role : null;
   const user = authUser ? toDisplayUser(authUser) : null;
+  // Read through a ref so changing the preference later never yanks the
+  // user off the screen they are currently working on.
+  const startScreenRef = useRef(prefs.startScreen);
+  startScreenRef.current = prefs.startScreen;
 
   const [screen, setScreen] = useState<ScreenId>('dashboard');
   const [history, setHistory] = useState<ScreenId[]>([]);
@@ -81,7 +89,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // navigation/UI state the moment a session ends.
   useEffect(() => {
     if (authUser && !prevAuthed.current) {
-      setScreen(role === 'management' ? 'reports' : role === 'embryologist' ? 'embryology' : role === 'receptionist' ? 'patients' : 'dashboard');
+      const roleDefault: ScreenId =
+        role === 'management' ? 'reports' : role === 'embryologist' ? 'embryology' : role === 'receptionist' ? 'patients' : 'dashboard';
+      // A staff member can pin their own landing screen in Settings →
+      // User Interface. Fall back to the role default if that choice is
+      // no longer one their role may open.
+      const chosen = startScreenRef.current;
+      const landing =
+        chosen !== 'role-default' && role && canAccess(role, chosen as ScreenId)
+          ? (chosen as ScreenId)
+          : roleDefault;
+      setScreen(landing);
       setHistory([]);
     } else if (!authUser && prevAuthed.current) {
       setHistory([]);

@@ -597,3 +597,112 @@ export function Select({
     </label>
   );
 }
+
+/* ============================================================
+   SETTINGS CONTROLS
+   ============================================================ */
+
+/** An on/off control. Reads as a real checkbox to screen readers and
+ *  keeps the 44px touch target the rest of this UI commits to. */
+export function Switch({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        'press relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200',
+        checked ? 'bg-brand-600' : 'bg-ink-300',
+        disabled && 'cursor-not-allowed opacity-50'
+      )}
+    >
+      <span
+        className={cn(
+          'absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200',
+          checked ? 'left-6' : 'left-1'
+        )}
+      />
+    </button>
+  );
+}
+
+/** A small set of mutually exclusive choices shown side by side.
+ *  Preferred over a dropdown when there are two to four options —
+ *  every choice stays visible, so nothing is hidden behind a click. */
+export function SegmentedControl<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { id: T; label: string; hint?: string }[];
+  label?: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg bg-ink-100 p-1">
+      {options.map((o) => {
+        const active = o.id === value;
+        return (
+          <button
+            key={o.id}
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(o.id)}
+            className={cn(
+              'min-h-[36px] rounded-md px-3.5 text-[13.5px] font-medium transition-all duration-200',
+              active ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-800'
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** One line in a settings list: what the setting is, what it does in
+ *  plain language, and its control — the description matters as much as
+ *  the control for staff who have never seen the option before. */
+export function SettingRow({
+  title,
+  description,
+  control,
+  icon,
+}: {
+  title: string;
+  description: string;
+  control: React.ReactNode;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-b border-ink-100 px-5 py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <div className="flex min-w-0 gap-3">
+        {icon && (
+          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink-100 text-ink-500">
+            {icon}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-[14.5px] font-semibold text-ink-900">{title}</p>
+          <p className="mt-0.5 text-[13px] leading-relaxed text-ink-500">{description}</p>
+        </div>
+      </div>
+      <div className="shrink-0 sm:pl-4">{control}</div>
+    </div>
+  );
+}

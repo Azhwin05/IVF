@@ -39,8 +39,8 @@ body {
    ACCESSIBILITY
    ============================================================ */
 
-/* Text-size preference (set from the "Aa" control in the top bar and
-   persisted in localStorage). `zoom` reflows layout properly — unlike
+/* Text-size preference (Settings → User Interface, persisted in
+   localStorage). `zoom` reflows layout properly — unlike
    transform: scale — and is supported by Chrome and by Safari on iPad,
    the two browsers this clinic actually uses. */
 .text-scale-large {
@@ -51,7 +51,9 @@ body {
 }
 
 /* Respect the OS-level "reduce motion" setting: kill decorative
-   animation and transitions so the interface is calm and immediate. */
+   animation and transitions so the interface is calm and immediate.
+   `.reduce-motion` is the same thing chosen explicitly in Settings, for
+   staff whose device setting is out of their control (shared iPads). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -61,6 +63,84 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ------------------------------------------------------------
+   DISPLAY DENSITY
+   Compact mode tightens the vertical rhythm so more rows fit on
+   one screen — useful on the front desk, where staff scan long
+   lists, and on smaller laptop displays. It deliberately only
+   touches padding and gaps, never font size (that is the separate
+   text-size preference) and never the 44px minimum touch target,
+   which stays intact for tablet use.
+   ------------------------------------------------------------ */
+.density-compact .p-5 {
+  padding: 0.875rem;
+}
+.density-compact .p-4 {
+  padding: 0.75rem;
+}
+.density-compact .py-3 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+.density-compact .py-3\.5 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+.density-compact .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.875rem;
+}
+.density-compact .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.75rem;
+}
+.density-compact .gap-5 {
+  gap: 0.875rem;
+}
+.density-compact .gap-4 {
+  gap: 0.75rem;
+}
+.density-compact main > div {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* ------------------------------------------------------------
+   HIGH CONTRAST
+   Raises border and secondary-text contrast for staff working
+   under bright clinic lighting or on washed-out external
+   displays. Brand green stays as-is; only greys are darkened, so
+   status colours keep their meaning.
+   ------------------------------------------------------------ */
+.high-contrast {
+  --border-subtle: rgb(120 113 108 / 0.55);
+}
+.high-contrast * {
+  border-color: var(--border-subtle);
+}
+.high-contrast .text-ink-400 {
+  color: #57534e;
+}
+.high-contrast .text-ink-500 {
+  color: #44403c;
+}
+.high-contrast .text-ink-600 {
+  color: #292524;
+}
+.high-contrast .bg-white {
+  background-color: #ffffff;
+}
+.high-contrast body {
+  color: #0c0a09;
 }
 
 /* Numerals align in columns — essential for clinical data */
