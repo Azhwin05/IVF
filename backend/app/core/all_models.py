@@ -12,6 +12,7 @@ from app.billing import models as _billing_models  # noqa: F401
 from app.clinical import models as _clinical_models  # noqa: F401
 from app.core.idempotency import IdempotencyRecord  # noqa: F401
 from app.cryostorage import models as _cryostorage_models  # noqa: F401
+from app.donor import models as _donor_models  # noqa: F401
 from app.embryology import models as _embryology_models  # noqa: F401
 from app.events import models as _events_models  # noqa: F401
 from app.hr import models as _hr_models  # noqa: F401

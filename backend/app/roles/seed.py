@@ -101,6 +101,10 @@ PERMISSIONS: list[tuple[str, str, str, bool]] = [
     ("reports.export", "reports", "Export reports", False),
     # Audit
     ("audit.read", "audit", "View the audit log", True),
+    # Donor management — new module, source doc §22-23
+    ("donor.read", "donor", "View donor records and matching history", False),
+    ("donor.write", "donor", "Register donors and record benchmarks", False),
+    ("donor.match", "donor", "Match/unmatch a donor to a patient", True),
     # Admin
     ("admin.manage_users", "admin", "Create/edit/deactivate user accounts", True),
     ("admin.manage_roles", "admin", "Edit role/permission assignments", True),
@@ -121,7 +125,7 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "laboratory.read", "laboratory.order",
         "ot.read", "ot.schedule",
         "pharmacy.read",
-        "billing.read", "billing.override",
+        "billing.read", "billing.override", "donor.read",
         "reports.read", "audit.read",
     ]),
     "nurse": ("Nurse", [
@@ -143,6 +147,7 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "cryostorage.read", "cryostorage.move",
         "laboratory.read", "laboratory.result",
         "inventory.read",
+        "donor.read", "donor.write", "donor.match",
     ]),
     "lab_technician": ("Lab Technician", [
         "patients.read",
@@ -186,7 +191,7 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "laboratory.read", "laboratory.order",
         "ot.read", "ot.schedule",
         "pharmacy.read",
-        "billing.read", "billing.override",
+        "billing.read", "billing.override", "donor.read",
         "reports.read", "audit.read",
     ]),
     "administrator": ("Administrator", ["*"]),  # gets every permission below
