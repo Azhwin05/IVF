@@ -1,0 +1,23 @@
+{
+  "report_id": "report_G_ocr_stress",
+  "results": [
+    {
+      "test_name": "Hemoglobin",
+      "value": "13.5",
+      "unit": "g/dL",
+      "reference_range": "12-16"
+    },
+    {
+      "test_name": "WBC",
+      "value": "7200",
+      "unit": "cells/uL",
+      "reference_range": "4000-11000"
+    },
+    {
+      "test_name": "Sodium",
+      "value": "138",
+      "unit": "mEq/L",
+      "reference_range": "135-145"
+    }
+  ]
+}

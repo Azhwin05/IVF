@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from './client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch, apiFetchBlob } from './client';
 import type { CycleDistributionRow, DashboardMetrics, DoctorPerformanceRow, OutcomeRow, RevenueTrendRow } from './types';
 
 export function useDashboardMetrics() {
@@ -62,4 +62,74 @@ export function useDischargeSummary(patientId: string | null) {
     queryFn: () => apiFetch<DischargeSummary>(`/reports/discharge-summary/${patientId}`),
     enabled: !!patientId,
   });
+}
+
+// ===========================================================================
+// Asynchronous report-generation jobs (Celery). Distinct from the live
+// analytics endpoints above: a job is queued, a worker builds an artifact in
+// the background, and the client polls for status then downloads.
+// ===========================================================================
+
+export type ReportJobType = 'patient_summary';
+export type ReportJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+
+export interface ReportJob {
+  id: string;
+  report_type: ReportJobType;
+  parameters: Record<string, unknown>;
+  status: ReportJobStatus;
+  requested_by_id: string;
+  error: string | null;
+  content_type: string | null;
+  byte_size: number | null;
+  queued_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
+export interface ReportJobPage {
+  items: ReportJob[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface SubmitReportJobBody {
+  report_type: ReportJobType;
+  parameters: Record<string, unknown>;
+  options?: { simulate_work_seconds?: number };
+}
+
+export function useReportJobs(status?: ReportJobStatus) {
+  return useQuery({
+    queryKey: ['report-jobs', status ?? 'all'],
+    queryFn: () => apiFetch<ReportJobPage>(`/reports/jobs${status ? `?status=${status}` : ''}`),
+  });
+}
+
+/** Polls one job until it reaches a terminal state, then stops on its own. */
+export function useReportJob(jobId: string | null) {
+  return useQuery({
+    queryKey: ['report-job', jobId],
+    queryFn: () => apiFetch<ReportJob>(`/reports/jobs/${jobId}`),
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      const s = (query.state.data as ReportJob | undefined)?.status;
+      return s === 'succeeded' || s === 'failed' ? false : 1500;
+    },
+  });
+}
+
+export function useSubmitReportJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SubmitReportJobBody) =>
+      apiFetch<ReportJob>('/reports/jobs', { method: 'POST', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['report-jobs'] }),
+  });
+}
+
+/** Downloads a finished job's artifact as a Blob. */
+export function fetchReportJobResult(jobId: string): Promise<Blob> {
+  return apiFetchBlob(`/reports/jobs/${jobId}/result`);
 }

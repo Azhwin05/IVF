@@ -1,0 +1,60 @@
+{
+  "report_id": "lab_sample2",
+  "note": "Dense 4-column scanned biochemistry/haematology panel (LIFE CARE DIAGNOSTICS). Only the rows that OCR transcribes cleanly are listed; several rows in the source image carry OCR artefacts (stray '|' pipes, misread digits) and are intentionally omitted. test_name uses the raw label as printed.",
+  "results": [
+    {
+      "test_name": "Haemoglobin (Hb)",
+      "value": "14.2",
+      "unit": "g/dl",
+      "reference_range": "13.0 - 17.0"
+    },
+    {
+      "test_name": "- Neutrophils",
+      "value": "58",
+      "unit": "%",
+      "reference_range": "40 - 70"
+    },
+    {
+      "test_name": "Fasting Blood Sugar",
+      "value": "103",
+      "unit": "mg/dL",
+      "reference_range": "70 - 100"
+    },
+    {
+      "test_name": "Blood Urea",
+      "value": "28",
+      "unit": "mg/dL",
+      "reference_range": "15-40"
+    },
+    {
+      "test_name": "Total Cholesterol",
+      "value": "186",
+      "unit": "mg/dL",
+      "reference_range": "< 200"
+    },
+    {
+      "test_name": "Triglycerides",
+      "value": "142",
+      "unit": "mg/dL",
+      "reference_range": "< 150"
+    },
+    {
+      "test_name": "LDL Cholesterol (Calculated)",
+      "value": "102",
+      "unit": "mg/dL",
+      "reference_range": "< 130"
+    },
+    {
+      "test_name": "SGOT (AST)",
+      "value": "24",
+      "unit": "U/L",
+      "reference_range": "10-40"
+    },
+    {
+      "test_name": "Alkaline Phosphatase",
+      "value": "86",
+      "unit": "U/L",
+      "reference_range": "44-147"
+    }
+  ]
+}

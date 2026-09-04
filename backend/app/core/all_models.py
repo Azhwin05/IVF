@@ -30,5 +30,6 @@ from app.prescription import models as _prescription_models  # noqa: F401
 from app.printing import models as _printing_models  # noqa: F401
 from app.purchasing import models as _purchasing_models  # noqa: F401
 from app.quality import models as _quality_models  # noqa: F401
+from app.reports import job_models as _reports_job_models  # noqa: F401
 from app.roles import models as _roles_models  # noqa: F401
 from app.users import models as _users_models  # noqa: F401

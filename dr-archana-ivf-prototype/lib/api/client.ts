@@ -148,3 +148,76 @@ export async function apiFetch<T = unknown>(path: string, options: ApiFetchOptio
 
   return payload as T;
 }
+
+/**
+ * One shared `token_expired` refresh + retry, then re-run `run` with the fresh
+ * token. Used by the non-JSON helpers below so a file upload / blob download
+ * survives an access token that expired mid-session, exactly like `apiFetch`.
+ */
+async function withAuthRetry(run: (token: string | null) => Promise<Response>): Promise<Response> {
+  let res = await run(tokenStore.get());
+  if (res.status === 401) {
+    let errorCode: string | null = null;
+    try {
+      errorCode = (await res.clone().json())?.error_code ?? null;
+    } catch {
+      /* non-JSON 401 — still attempt a refresh */
+    }
+    if (errorCode !== 'permission_denied') {
+      const newToken = await refreshAccessToken();
+      if (newToken) res = await run(newToken);
+    }
+  }
+  return res;
+}
+
+async function throwApiError(res: Response): Promise<never> {
+  const payload = res.headers.get('content-type')?.includes('application/json')
+    ? await res.json().catch(() => null)
+    : null;
+  throw new ApiError(
+    res.status,
+    payload?.message ?? res.statusText ?? 'Request failed',
+    payload?.error_code ?? null,
+    payload?.request_id ?? null,
+  );
+}
+
+/**
+ * `multipart/form-data` POST/PATCH. The browser sets the multipart
+ * Content-Type (with boundary) itself, so this must not send its own.
+ * Errors surface as `ApiError`, same envelope as `apiFetch`.
+ */
+export async function apiUpload<T = unknown>(
+  path: string,
+  form: FormData,
+  options: { method?: string } = {},
+): Promise<T> {
+  const res = await withAuthRetry((token) =>
+    fetch(`${API_BASE}${path}`, {
+      method: options.method ?? 'POST',
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    }),
+  );
+  if (!res.ok) return throwApiError(res);
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+/**
+ * Authenticated binary GET — for endpoints that stream a file (e.g. a lab
+ * report document) rather than JSON. Returns the raw Blob; the caller decides
+ * whether to open it in a tab or offer it for download.
+ */
+export async function apiFetchBlob(path: string): Promise<Blob> {
+  const res = await withAuthRetry((token) =>
+    fetch(`${API_BASE}${path}`, {
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }),
+  );
+  if (!res.ok) return throwApiError(res);
+  return res.blob();
+}

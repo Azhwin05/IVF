@@ -55,6 +55,8 @@ PERMISSIONS: list[tuple[str, str, str, bool]] = [
     ("laboratory.read", "laboratory", "View lab orders and results", False),
     ("laboratory.order", "laboratory", "Order lab tests", False),
     ("laboratory.result", "laboratory", "Enter/verify lab results", False),
+    ("laboratory.upload", "laboratory", "Upload an outside-lab report and run extraction", False),
+    ("laboratory.correct", "laboratory", "Correct an extracted lab result or add one by hand", True),
     # OT
     ("ot.read", "ot", "View OT schedule", False),
     ("ot.schedule", "ot", "Schedule OT procedures", False),
@@ -99,6 +101,7 @@ PERMISSIONS: list[tuple[str, str, str, bool]] = [
     # Reports
     ("reports.read", "reports", "View operational/clinical reports", False),
     ("reports.export", "reports", "Export reports", False),
+    ("reports.generate", "reports", "Submit an asynchronous report-generation job", False),
     # Audit
     ("audit.read", "audit", "View the audit log", True),
     # Messaging — new module, source doc §26-27
@@ -124,11 +127,11 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "ivf.read", "ivf.write", "ivf.monitoring.write",
         "embryology.read", "embryology.transfer",
         "cryostorage.read",
-        "laboratory.read", "laboratory.order",
+        "laboratory.read", "laboratory.order", "laboratory.upload", "laboratory.correct",
         "ot.read", "ot.schedule",
         "pharmacy.read",
         "billing.read", "billing.override", "donor.read",
-        "reports.read", "audit.read",
+        "reports.read", "reports.generate", "audit.read",
     ]),
     "nurse": ("Nurse", [
         "patients.read", "appointments.read", "appointments.checkin",
@@ -148,13 +151,14 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "ivf.read",
         "embryology.read", "embryology.write", "embryology.transfer",
         "cryostorage.read", "cryostorage.move",
-        "laboratory.read", "laboratory.result",
+        "laboratory.read", "laboratory.result", "laboratory.upload", "laboratory.correct",
         "inventory.read",
         "donor.read", "donor.write", "donor.match",
     ]),
     "lab_technician": ("Lab Technician", [
         "patients.read",
         "laboratory.read", "laboratory.order", "laboratory.result",
+        "laboratory.upload", "laboratory.correct",
         "quality.read", "quality.complete",
     ]),
     "pharmacist": ("Pharmacist", [
@@ -166,14 +170,14 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
     "accountant": ("Accountant", [
         "billing.read", "billing.create", "billing.payment", "billing.refund",
         "accounting.read", "accounting.write",
-        "reports.read", "reports.export",
+        "reports.read", "reports.export", "reports.generate",
     ]),
     "management": ("Management", [
         "patients.read", "appointments.read",
         "billing.read", "accounting.read",
         "inventory.read", "purchasing.read", "purchasing.approve",
         "hr.read", "hr.approve_leave",
-        "reports.read", "reports.export",
+        "reports.read", "reports.export", "reports.generate",
         "audit.read",
         "maintenance.read", "quality.read", "assets.read",
     ]),
@@ -191,11 +195,11 @@ ROLE_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         "ivf.read", "ivf.write", "ivf.monitoring.write", "ivf.protocol.read", "ivf.protocol.write",
         "embryology.read", "embryology.transfer",
         "cryostorage.read",
-        "laboratory.read", "laboratory.order",
+        "laboratory.read", "laboratory.order", "laboratory.upload", "laboratory.correct",
         "ot.read", "ot.schedule",
         "pharmacy.read",
         "billing.read", "billing.override", "donor.read",
-        "reports.read", "audit.read",
+        "reports.read", "reports.generate", "audit.read",
     ]),
     "administrator": ("Administrator", ["*"]),  # gets every permission below
     "it_administrator": ("IT Administrator", [

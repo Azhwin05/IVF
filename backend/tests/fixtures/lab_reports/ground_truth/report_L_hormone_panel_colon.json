@@ -1,0 +1,29 @@
+{
+  "report_id": "report_L_hormone_panel_colon",
+  "results": [
+    {
+      "test_name": "Estradiol (E2)",
+      "value": "45.2",
+      "unit": "pg/mL",
+      "reference_range": "19.5-144.2"
+    },
+    {
+      "test_name": "Progesterone",
+      "value": "0.6",
+      "unit": "ng/mL",
+      "reference_range": "0.2-1.5"
+    },
+    {
+      "test_name": "AMH",
+      "value": "3.1",
+      "unit": "ng/mL",
+      "reference_range": "1.0-4.0"
+    },
+    {
+      "test_name": "Beta hCG",
+      "value": "<2",
+      "unit": "mIU/mL",
+      "reference_range": "<5 non-pregnant"
+    }
+  ]
+}

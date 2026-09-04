@@ -1,0 +1,23 @@
+{
+  "report_id": "report_M_scanned_rotated",
+  "results": [
+    {
+      "test_name": "Hb",
+      "value": "12.9",
+      "unit": "g/dL",
+      "reference_range": "12-16"
+    },
+    {
+      "test_name": "TLC",
+      "value": "8100",
+      "unit": "cells/uL",
+      "reference_range": "4000-11000"
+    },
+    {
+      "test_name": "Platelets",
+      "value": "198000",
+      "unit": "cells/uL",
+      "reference_range": "150000-450000"
+    }
+  ]
+}

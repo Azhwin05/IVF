@@ -16,6 +16,7 @@ import { AreaChart, BarChart, DonutChart, ProgressRing } from '@/components/ui/c
 import { useCountUp } from '@/lib/hooks';
 import { useCycleDistribution, useDoctorPerformance, useOutcomes, useRevenueTrend } from '@/lib/api/reports';
 import { useDoctors } from '@/lib/api/users';
+import { PatientReportCard } from '@/components/reports/PatientReportCard';
 import { BarChart3, Download, TrendingUp, TrendingDown, Activity, IndianRupee, Users2, Stethoscope } from 'lucide-react';
 
 const OUTCOME_LABEL: Record<string, string> = {
@@ -146,6 +147,9 @@ export function Reports() {
           </Button>
         </div>
       </div>
+
+      {/* ============ PATIENT REPORT (async generation) ============ */}
+      <PatientReportCard />
 
       {/* ============ CLINICAL KPIS ============ */}
       <div className="stagger grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">

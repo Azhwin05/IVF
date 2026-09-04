@@ -1,0 +1,29 @@
+{
+  "report_id": "report_B_reordered_columns",
+  "results": [
+    {
+      "test_name": "FSH",
+      "value": "6.2",
+      "unit": "mIU/mL",
+      "reference_range": "1.5-12.4"
+    },
+    {
+      "test_name": "LH",
+      "value": "5.4",
+      "unit": "mIU/mL",
+      "reference_range": "1.9-12.5"
+    },
+    {
+      "test_name": "Prolactin",
+      "value": "18.9",
+      "unit": "ng/mL",
+      "reference_range": "4.8-23.3"
+    },
+    {
+      "test_name": "TSH",
+      "value": "2.1",
+      "unit": "uIU/mL",
+      "reference_range": "0.4-4.0"
+    }
+  ]
+}

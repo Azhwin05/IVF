@@ -14,8 +14,18 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 
 FROM python:3.12-slim AS runtime
 
-# Runtime-only system deps (libpq for psycopg2, curl for the healthcheck)
-RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl && rm -rf /var/lib/apt/lists/*
+# Runtime-only system deps:
+#   libpq5             - psycopg2
+#   curl               - the healthcheck
+#   tesseract-ocr      - OCR for scanned / image laboratory reports
+#                        (pytesseract shells out to the `tesseract` binary;
+#                        with it absent the extraction pipeline degrades
+#                        safely and flags the report instead of guessing)
+#   tesseract-ocr-eng  - English trained data (--no-install-recommends would
+#                        otherwise skip it, leaving `tesseract` unusable)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 curl tesseract-ocr tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --gid 1000 archana && useradd --uid 1000 --gid archana --shell /bin/bash --create-home archana
 

@@ -1,0 +1,23 @@
+{
+  "report_id": "report_C_nontabular",
+  "results": [
+    {
+      "test_name": "Follicle Stimulating Hormone",
+      "value": "6.2",
+      "unit": "mIU/mL",
+      "reference_range": "1.5-12.4"
+    },
+    {
+      "test_name": "Luteinizing Hormone",
+      "value": "5.4",
+      "unit": "mIU/mL",
+      "reference_range": "1.9-12.5"
+    },
+    {
+      "test_name": "Anti-Mullerian Hormone",
+      "value": "2.8",
+      "unit": "ng/mL",
+      "reference_range": "1.0-4.0"
+    }
+  ]
+}

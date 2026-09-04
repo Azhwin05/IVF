@@ -1,0 +1,35 @@
+{
+  "report_id": "report_I_textual_results",
+  "results": [
+    {
+      "test_name": "HIV (ELISA)",
+      "value": "Non-Reactive",
+      "unit": null,
+      "reference_range": null
+    },
+    {
+      "test_name": "HBsAg",
+      "value": "Negative",
+      "unit": null,
+      "reference_range": null
+    },
+    {
+      "test_name": "Urine Sugar",
+      "value": "Nil",
+      "unit": null,
+      "reference_range": null
+    },
+    {
+      "test_name": "Urine Albumin",
+      "value": "Trace",
+      "unit": null,
+      "reference_range": null
+    },
+    {
+      "test_name": "Blood Group",
+      "value": "O Positive",
+      "unit": null,
+      "reference_range": null
+    }
+  ]
+}

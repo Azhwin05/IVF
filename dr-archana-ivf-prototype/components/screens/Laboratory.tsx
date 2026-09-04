@@ -10,6 +10,7 @@ import { useLabOrders, useLabResults, useAddLabResult, type LabOrderStatus, type
 import { useLabTestCatalogue } from '@/lib/api/administration';
 import { usePatients } from '@/lib/api/patients';
 import { ApiError } from '@/lib/api/client';
+import { LabReportsPanel } from '@/components/laboratory/LabReportsPanel';
 import {
   FlaskConical,
   Search,
@@ -331,6 +332,8 @@ export function Laboratory() {
           </div>
         </Card>
       </div>
+
+      <LabReportsPanel />
     </div>
   );
 }

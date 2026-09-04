@@ -62,6 +62,34 @@ class Settings(BaseSettings):
         "image/webp",
     ]
 
+    # ---- Laboratory report extraction ----
+    # Local-filesystem seam for uploaded outside-lab report documents. Callers
+    # only ever hold the opaque storage key this returns, so swapping in a
+    # MinIO-backed ObjectStorage later needs no data migration.
+    LAB_STORAGE_DIR: str = "./var/lab-reports"
+    # When true the deterministic pipeline may hand pages to a configured AI
+    # extraction provider. No provider is wired in, so enabling this without one
+    # is a no-op — extraction stays deterministic.
+    LAB_AI_EXTRACTION_ENABLED: bool = False
+    # Absolute path to the Tesseract OCR binary. Leave unset to auto-discover it
+    # (PATH, then the standard Windows install locations). Scanned PDFs and image
+    # reports need it; digital PDFs do not. When it cannot be found, OCR fails
+    # safely and no values are fabricated.
+    TESSERACT_CMD: str | None = None
+
+    # ---- Asynchronous report generation (Celery) ----
+    # Where generated report artifacts are stored (same local-FS seam idea as
+    # LAB_STORAGE_DIR). Broker/result-backend reuse CELERY_BROKER_URL /
+    # CELERY_RESULT_BACKEND above — this module adds no new Redis settings.
+    REPORT_STORAGE_DIR: str = "./var/reports"
+    # Upper bound for the request-supplied options.simulate_work_seconds knob,
+    # which makes the generator sleep to exercise the async pipeline under load.
+    REPORT_SIMULATE_MAX_SECONDS: int = 30
+    # When true, Celery `.delay()` runs the task inline and synchronously. The
+    # unit-test suite sets this so it can drive enqueue -> generate -> status
+    # without a running broker or worker. Never enabled in real runs.
+    CELERY_TASK_ALWAYS_EAGER: bool = False
+
     @field_validator("JWT_SECRET_KEY")
     @classmethod
     def secret_must_be_overridden_in_production(cls, v: str, info) -> str:

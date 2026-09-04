@@ -45,3 +45,13 @@ backend/celerybeat-schedule
 __pycache__/
 *.pyc
 .pytest_cache/
+# Local-filesystem storage seams for lab report documents and generated
+# report artifacts (LAB_STORAGE_DIR / REPORT_STORAGE_DIR defaults).
+backend/var/
+# Local virtualenv (deps come from requirements.txt).
+backend/.venv/
+.venv/
+# Per-machine Docker Compose overrides (e.g. remapping host ports that an
+# unrelated local project already holds). Never part of the standard stack.
+docker-compose.local.yml
+docker-compose.override.yml

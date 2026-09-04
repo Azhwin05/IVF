@@ -21,7 +21,9 @@ celery_app = Celery(
     "archana_hmis",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.workers.tasks"],
+    # app.reports.job_tasks holds the asynchronous report-generation task; it
+    # reuses this same broker/result backend and adds no new Redis settings.
+    include=["app.workers.tasks", "app.reports.job_tasks"],
 )
 
 celery_app.conf.update(
@@ -33,6 +35,12 @@ celery_app.conf.update(
     task_track_started=True,
     worker_prefetch_multiplier=1,  # fair dispatch — no single worker hoards a burst of tasks
     task_acks_late=True,  # a crashed worker doesn't silently drop a task
+    # Eager mode: `.delay()` / `.apply_async()` run the task inline and
+    # synchronously. Off in every real run; the report-job unit tests set
+    # CELERY_TASK_ALWAYS_EAGER=1 so they can drive enqueue -> generate ->
+    # status without a running broker or worker.
+    task_always_eager=settings.CELERY_TASK_ALWAYS_EAGER,
+    task_eager_propagates=settings.CELERY_TASK_ALWAYS_EAGER,
 )
 
 celery_app.conf.beat_schedule = {

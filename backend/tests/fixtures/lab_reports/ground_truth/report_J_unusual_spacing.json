@@ -1,0 +1,29 @@
+{
+  "report_id": "report_J_unusual_spacing",
+  "results": [
+    {
+      "test_name": "Fasting Blood Sugar",
+      "value": "92",
+      "unit": "mg/dL",
+      "reference_range": "70 - 100"
+    },
+    {
+      "test_name": "HbA1c",
+      "value": "5.4",
+      "unit": "%",
+      "reference_range": "4.0 - 5.6"
+    },
+    {
+      "test_name": "Total Cholesterol",
+      "value": "178",
+      "unit": "mg/dL",
+      "reference_range": "<200"
+    },
+    {
+      "test_name": "Creatinine",
+      "value": "0.8",
+      "unit": "mg/dL",
+      "reference_range": "0.6 - 1.2"
+    }
+  ]
+}

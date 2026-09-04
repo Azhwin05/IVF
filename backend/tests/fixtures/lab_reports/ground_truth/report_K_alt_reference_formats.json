@@ -1,0 +1,29 @@
+{
+  "report_id": "report_K_alt_reference_formats",
+  "results": [
+    {
+      "test_name": "Free T4",
+      "value": "1.2",
+      "unit": "ng/dL",
+      "reference_range": "0.8 to 1.8"
+    },
+    {
+      "test_name": "Vitamin D (25-OH)",
+      "value": "22",
+      "unit": "ng/mL",
+      "reference_range": "Deficient: <20; Sufficient: 30-100"
+    },
+    {
+      "test_name": "Vitamin B12",
+      "value": "410",
+      "unit": "pg/mL",
+      "reference_range": ">= 200"
+    },
+    {
+      "test_name": "Ferritin",
+      "value": "45",
+      "unit": "ng/mL",
+      "reference_range": "15 - 150"
+    }
+  ]
+}

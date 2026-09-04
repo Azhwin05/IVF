@@ -1,0 +1,29 @@
+{
+  "report_id": "report_A_clean_table",
+  "results": [
+    {
+      "test_name": "Hemoglobin",
+      "value": "13.5",
+      "unit": "g/dL",
+      "reference_range": "12-16"
+    },
+    {
+      "test_name": "WBC",
+      "value": "7200",
+      "unit": "cells/uL",
+      "reference_range": "4000-11000"
+    },
+    {
+      "test_name": "Platelet Count",
+      "value": "250000",
+      "unit": "cells/uL",
+      "reference_range": "150000-450000"
+    },
+    {
+      "test_name": "RBC Count",
+      "value": "4.6",
+      "unit": "mill/cmm",
+      "reference_range": "4.0-5.2"
+    }
+  ]
+}
