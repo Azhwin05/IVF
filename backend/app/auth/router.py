@@ -19,19 +19,28 @@ from app.users.schemas import UserSummary
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 
-# httpOnly, Secure, SameSite=Strict cookie for the refresh token; the access
-# token is returned in the body for the frontend to hold in memory only
-# (never localStorage — see docs/security/authentication.md).
+# httpOnly refresh-token cookie; the access token is returned in the body for
+# the frontend to hold in memory only (never localStorage — see
+# docs/security/authentication.md).
+#
+# Same-origin deployments (SPA and API behind one host, as with the nginx setup
+# in docker-compose) keep SameSite=Strict. When the API is served from a
+# different origin than the SPA — e.g. the SPA on Vercel and the API behind a
+# tunnel — a Strict cookie is never sent on the cross-site /auth/refresh call,
+# so any non-local environment uses SameSite=None, which the browser only
+# accepts together with Secure. `allow_credentials=True` plus an explicit
+# origin list in CORS_ORIGINS (never "*") keep this safe.
 REFRESH_COOKIE = "hmis_refresh"
 
 
 def _set_refresh_cookie(response: Response, token: str) -> None:
+    is_local = settings.ENVIRONMENT == "local"
     response.set_cookie(
         key=REFRESH_COOKIE,
         value=token,
         httponly=True,
-        secure=settings.ENVIRONMENT != "local",
-        samesite="strict",
+        secure=not is_local,
+        samesite="strict" if is_local else "none",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
         path="/api/v1/auth",
     )
