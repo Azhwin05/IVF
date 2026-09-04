@@ -102,6 +102,12 @@ async def create_couple(
     session.add(couple)
     await session.flush()
 
+    # CoupleOut serialises both partner relationships. A freshly-added object
+    # has not been through a SELECT, so lazy="selectin" never fired; without
+    # this refresh, response serialisation lazy-loads on the async session and
+    # raises MissingGreenlet -> 500 "Could not create the couple".
+    await session.refresh(couple, attribute_names=["female_patient", "male_patient"])
+
     await record_audit_event(
         session, actor_id=actor_id, actor_role=actor_role,
         action="couple.created", entity_type="Couple", entity_id=str(couple.id),

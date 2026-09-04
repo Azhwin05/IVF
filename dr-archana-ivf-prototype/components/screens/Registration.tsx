@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { cn, ageFromDOB, initialsOf } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, SectionTitle, Input, Select, Field, InfoNote, Avatar } from '@/components/ui/primitives';
-import { useCreateCouple, useUploadPatientDocument, useMandatoryDocumentStatus } from '@/lib/api/patients';
+import { useCreateCouple, useUploadPatientDocument, useMandatoryDocumentStatus, uploadPatientDocument } from '@/lib/api/patients';
+import { PhotoCapture } from '@/components/ui/PhotoCapture';
 import { ApiError } from '@/lib/api/client';
 import type { CoupleOut } from '@/lib/api/types';
 import { Check, ChevronLeft, ChevronRight, UserPlus, Users, Heart, FileCheck, Link2, ShieldCheck, Sparkles, AlertTriangle, Upload } from 'lucide-react';
@@ -63,12 +64,33 @@ function MandatoryDocumentUpload({ patientId, patientName, isInternational }: { 
   );
 }
 
+/** Small review-screen thumbnail: the captured photo if there is one, else the
+ * initials avatar, so the reviewer can see exactly which face is attached to
+ * which person before the couple is created. */
+function ReviewPhoto({ file, initials, gradient }: { file: File | null; initials: string; gradient: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  React.useEffect(() => {
+    if (!file) { setUrl(null); return; }
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  if (url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={url} alt="Registration photo preview" className="h-10 w-10 rounded-full object-cover ring-1 ring-ink-200" />;
+  }
+  return <Avatar initials={initials} size="md" gradient={gradient} />;
+}
+
 export function Registration() {
   const { go, toast, openPatient } = useApp();
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   const [createdCouple, setCreatedCouple] = useState<CoupleOut | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [photoWarning, setPhotoWarning] = useState<string | null>(null);
+  const [patientPhoto, setPatientPhoto] = useState<File | null>(null);
+  const [partnerPhoto, setPartnerPhoto] = useState<File | null>(null);
   const createCouple = useCreateCouple();
 
   const [form, setForm] = useState({
@@ -130,8 +152,33 @@ export function Registration() {
         previous_treatment_notes: form.history || null,
       },
       {
-        onSuccess: (couple) => {
+        onSuccess: async (couple) => {
           setCreatedCouple(couple);
+
+          // Attach each photo to its own person. The couple already exists at
+          // this point, so a photo failure is surfaced as a non-fatal warning
+          // (retry from the profile) rather than losing the registration.
+          const failed: string[] = [];
+          if (patientPhoto) {
+            try {
+              await uploadPatientDocument(couple.female_patient.id, 'photo', patientPhoto);
+            } catch {
+              failed.push('patient');
+            }
+          }
+          if (partnerPhoto) {
+            try {
+              await uploadPatientDocument(couple.male_patient.id, 'photo', partnerPhoto);
+            } catch {
+              failed.push('partner');
+            }
+          }
+          setPhotoWarning(
+            failed.length
+              ? `The couple was created, but the ${failed.join(' and ')} photo${failed.length > 1 ? 's' : ''} could not be uploaded. You can add ${failed.length > 1 ? 'them' : 'it'} from the patient profile.`
+              : null,
+          );
+
           setDone(true);
           toast({
             title: 'Couple created successfully',
@@ -189,6 +236,13 @@ export function Registration() {
           </div>
         </Card>
 
+        {photoWarning && (
+          <div className="mt-5 flex w-full items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-[13.5px] leading-relaxed text-amber-800">{photoWarning}</p>
+          </div>
+        )}
+
         {createdCouple && (
           <Card className="mt-5 w-full p-5 text-left">
             <MandatoryDocumentUpload
@@ -200,7 +254,7 @@ export function Registration() {
         )}
 
         <div className="mt-6 flex gap-3">
-          <Button onClick={() => { setDone(false); setCreatedCouple(null); setStep(0); }}>Register another couple</Button>
+          <Button onClick={() => { setDone(false); setCreatedCouple(null); setStep(0); setPatientPhoto(null); setPartnerPhoto(null); setPhotoWarning(null); }}>Register another couple</Button>
           <Button
             variant="primary"
             iconRight={<ChevronRight className="h-4 w-4" />}
@@ -318,6 +372,14 @@ export function Registration() {
               <div className="sm:col-span-2">
                 <Input label="Emergency Contact" value={form.emergency} onChange={(e) => set('emergency', e.target.value)} />
               </div>
+              <div className="sm:col-span-2">
+                <PhotoCapture
+                  idPrefix="patient"
+                  label="Patient Photo"
+                  value={patientPhoto}
+                  onChange={setPatientPhoto}
+                />
+              </div>
             </div>
           )}
 
@@ -348,6 +410,14 @@ export function Registration() {
                   <option>Married — Other</option>
                   <option>Partner</option>
                 </Select>
+                <div className="sm:col-span-2">
+                  <PhotoCapture
+                    idPrefix="partner"
+                    label="Partner Photo"
+                    value={partnerPhoto}
+                    onChange={setPartnerPhoto}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -425,7 +495,7 @@ export function Registration() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Card className="p-4">
                   <div className="mb-3 flex items-center gap-2.5">
-                    <Avatar initials={initialsOf(form.name)} size="md" gradient="from-brand-500 to-teal-600" />
+                    <ReviewPhoto file={patientPhoto} initials={initialsOf(form.name)} gradient="from-brand-500 to-teal-600" />
                     <div>
                       <p className="text-[14.5px] font-semibold text-ink-900">{form.name || 'Patient'}</p>
                       <p className="text-[12.5px] text-brand-700">UHID assigned on creation</p>
@@ -438,7 +508,7 @@ export function Registration() {
 
                 <Card className="p-4">
                   <div className="mb-3 flex items-center gap-2.5">
-                    <Avatar initials={initialsOf(form.pName)} size="md" gradient="from-sky-500 to-blue-600" />
+                    <ReviewPhoto file={partnerPhoto} initials={initialsOf(form.pName)} gradient="from-sky-500 to-blue-600" />
                     <div>
                       <p className="text-[14.5px] font-semibold text-ink-900">{form.pName || 'Partner'}</p>
                       <p className="text-[12.5px] text-sky-700">UHID assigned on creation</p>
